@@ -457,7 +457,6 @@
   }
 
   function uid(){
-    // достаточно для локального списка
     return "g_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
   }
 
@@ -473,16 +472,18 @@
       createdAt: now()
     },
 
+    // По умолчанию 1 цель на день
     dailyGoals: [
       { id: uid(), text: "" }
     ],
 
     todayChecks: {
       date: todayKey(),
-      byId: {} // goalId -> bool
+      byId: {}
     },
 
-    entries: [] // { at, day, text, goalsSnapshot:[{id,text,done}], stakeText, stakeDone }
+    // Вся лента событий/записей
+    entries: []
   });
 
   let S = load();
@@ -573,14 +574,30 @@
     renderMeta();
   }
 
+  // ✅ ВАЖНО: удаление цели теперь попадает в историю
   function removeGoal(id){
-    S.dailyGoals = S.dailyGoals.filter(g => g.id !== id);
+    const g = S.dailyGoals.find(x => x.id === id);
+
+    // Логируем удаление в историю
+    if (g) {
+      S.entries.push({
+        type: "goal_deleted",
+        at: now(),
+        day: todayKey(),
+        goalText: g.text || "(пустая цель)"
+      });
+    }
+
+    S.dailyGoals = S.dailyGoals.filter(x => x.id !== id);
     delete S.todayChecks.byId[id];
+
     S.lastOpenAt = now();
     save(S);
     renderDailyGoals();
     renderProgress();
     renderMeta();
+    renderHistory();   // обновить ленту
+    renderStreak();    // обновить календарь/цепочку
     showToast("Цель удалена");
   }
 
@@ -653,10 +670,22 @@
   }
 
   // ---------- HISTORY / STREAK ----------
+  // ✅ История теперь показывает и удалённые цели (type: goal_deleted)
   function renderHistory(){
     const list = (S.entries ?? []).slice().reverse();
+
     $("history").innerHTML = list.length
       ? list.map(e=>{
+          if (e.type === "goal_deleted") {
+            return `
+              <div class="entry">
+                <b>${new Date(e.at).toLocaleString()}</b>
+                <div class="small">Событие: удалена цель</div>
+                <div style="margin-top:8px;">${escapeHtml(e.goalText || "")}</div>
+              </div>
+            `;
+          }
+
           const checks = (e.goalsSnapshot || []).filter(x => x.done).length;
           const total = (e.goalsSnapshot || []).length;
           return `
@@ -664,7 +693,7 @@
               <b>${new Date(e.at).toLocaleString()}</b>
               <div class="small">Ставка: ${escapeHtml(e.stakeText || "—")} ${e.stakeDone ? "✅" : ""}</div>
               <div class="small">День: выполнено ${checks}/${total}</div>
-              <div style="margin-top:8px;">${escapeHtml(e.text)}</div>
+              <div style="margin-top:8px;">${escapeHtml(e.text || "")}</div>
             </div>
           `;
         }).join("")
@@ -675,6 +704,9 @@
     // День засчитан, если есть запись и хотя бы 1 done в goalsSnapshot
     const done = new Set();
     for(const e of (S.entries ?? [])){
+      // удаление цели на streak не влияет
+      if (e.type === "goal_deleted") continue;
+
       const day = e.day || ymdFromMs(e.at);
       const gs = Array.isArray(e.goalsSnapshot) ? e.goalsSnapshot : [];
       if(gs.some(x => x.done)) done.add(day);
@@ -726,7 +758,6 @@
 
   // ---------- SAVE ENTRY ----------
   function saveEntry(){
-    // sync + validations
     S.stake.text = $("stakeText").value.trim();
 
     const text = $("log").value.trim();
@@ -735,7 +766,6 @@
       return;
     }
 
-    // snapshot of daily goals + today's checks
     const goalsSnapshot = S.dailyGoals.map(g => ({
       id: g.id,
       text: g.text || "",
@@ -809,7 +839,6 @@
       if(!data || typeof data !== "object") throw new Error("bad");
       S = { ...stateDefault(), ...data };
 
-      // normalize
       if (!S.todayChecks || S.todayChecks.date !== todayKey()){
         S.todayChecks = { date: todayKey(), byId: {} };
       }
@@ -840,9 +869,6 @@
     renderStreak();
     $("status").textContent = "Автосохранение включено (всё хранится локально).";
   }
-
-  // autosave for stake
-  $("stakeText").addEventListener("change", syncStakeFromUI);
 
   renderAll();
   setInterval(renderMeta, 60_000);
