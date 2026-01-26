@@ -3,128 +3,784 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Мои 1–3 цели</title>
+  <title>Goal — 1–3 цели</title>
+
   <style>
-    body { font-family: system-ui, Arial; max-width: 820px; margin: 24px auto; padding: 0 16px; }
-    textarea, input { width: 100%; padding: 10px; font-size: 16px; box-sizing: border-box; }
-    .row { display: grid; gap: 10px; margin-bottom: 12px; }
-    button { padding: 10px 14px; font-size: 16px; cursor: pointer; }
-    .muted { color: #666; font-size: 14px; }
-    .box { border: 1px solid #ddd; border-radius: 10px; padding: 12px; margin: 14px 0; }
-    .flex { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    :root{
+      --bg: #0b1220;
+      --card: rgba(255,255,255,.06);
+      --card2: rgba(255,255,255,.09);
+      --text: rgba(255,255,255,.92);
+      --muted: rgba(255,255,255,.65);
+      --line: rgba(255,255,255,.10);
+      --accent: #7c3aed;
+      --accent2:#22c55e;
+      --danger:#ef4444;
+      --shadow: 0 18px 50px rgba(0,0,0,.35);
+      --radius: 18px;
+    }
+    [data-theme="light"]{
+      --bg: #f6f7fb;
+      --card: rgba(0,0,0,.04);
+      --card2: rgba(0,0,0,.06);
+      --text: rgba(0,0,0,.90);
+      --muted: rgba(0,0,0,.55);
+      --line: rgba(0,0,0,.10);
+      --shadow: 0 18px 50px rgba(0,0,0,.12);
+    }
+
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background:
+        radial-gradient(1200px 700px at 20% -10%, rgba(124,58,237,.35), transparent 60%),
+        radial-gradient(900px 500px at 90% 0%, rgba(34,197,94,.22), transparent 55%),
+        var(--bg);
+      color: var(--text);
+      min-height:100vh;
+    }
+
+    .wrap{ max-width: 1120px; margin: 0 auto; padding: 28px 16px 60px; }
+    header{
+      display:flex; align-items:center; justify-content:space-between;
+      gap: 12px; margin-bottom: 18px;
+    }
+    .brand{ display:flex; align-items:center; gap:12px; }
+    .logo{
+      width:42px; height:42px; border-radius: 14px;
+      background: linear-gradient(135deg, rgba(124,58,237,1), rgba(34,197,94,1));
+      box-shadow: var(--shadow);
+    }
+    h1{ font-size: 22px; margin:0; letter-spacing: .2px; }
+    .sub{ color: var(--muted); font-size: 13px; margin-top: 2px; }
+    .top-actions{ display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1.15fr .85fr;
+      gap: 14px;
+    }
+    @media (max-width: 920px){ .grid{ grid-template-columns: 1fr; } }
+
+    .card{
+      background: linear-gradient(180deg, var(--card), transparent 140%);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px;
+      overflow:hidden;
+    }
+    .card h2{ margin:0 0 10px; font-size: 16px; }
+    .muted{ color: var(--muted); font-size: 13px; }
+
+    .row{ display:grid; gap:10px; margin-top: 10px; }
+    .goals{ display:grid; gap:10px; }
+
+    .goal{
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+      background: rgba(255,255,255,.03);
+    }
+    .goal-top{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      margin-bottom: 8px;
+    }
+    .pill{
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      color: var(--muted);
+      background: rgba(255,255,255,.03);
+      white-space:nowrap;
+    }
+
+    input[type="text"], textarea{
+      width:100%;
+      padding: 12px 12px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(0,0,0,.14);
+      color: var(--text);
+      outline:none;
+    }
+    [data-theme="light"] input[type="text"], [data-theme="light"] textarea{
+      background: rgba(255,255,255,.75);
+    }
+    textarea{ min-height: 120px; resize: vertical; }
+
+    .btn{
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 14px;
+      cursor:pointer;
+      display:inline-flex;
+      align-items:center;
+      gap: 8px;
+      font-weight: 600;
+      transition: transform .08s ease, background .2s ease;
+      user-select:none;
+    }
+    .btn:hover{ background: rgba(255,255,255,.10); }
+    .btn:active{ transform: translateY(1px); }
+    .btn.primary{
+      background: linear-gradient(135deg, rgba(124,58,237,.95), rgba(124,58,237,.65));
+      border-color: rgba(124,58,237,.55);
+    }
+    .btn.success{
+      background: linear-gradient(135deg, rgba(34,197,94,.95), rgba(34,197,94,.55));
+      border-color: rgba(34,197,94,.55);
+    }
+    .btn.danger{
+      background: linear-gradient(135deg, rgba(239,68,68,.95), rgba(239,68,68,.55));
+      border-color: rgba(239,68,68,.55);
+    }
+
+    .bar{
+      height: 10px;
+      background: rgba(255,255,255,.08);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      overflow:hidden;
+    }
+    .bar > div{
+      height:100%;
+      width:0%;
+      background: linear-gradient(90deg, rgba(124,58,237,1), rgba(34,197,94,1));
+      transition: width .25s ease;
+    }
+
+    .two{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    @media (max-width: 520px){ .two{ grid-template-columns: 1fr; } }
+
+    .hist{
+      display:grid;
+      gap: 10px;
+      margin-top: 10px;
+      max-height: 380px;
+      overflow:auto;
+      padding-right: 4px;
+    }
+    .entry{
+      border:1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px;
+      background: rgba(255,255,255,.03);
+    }
+    .entry b{ display:block; margin-bottom:6px; }
+    .small{ font-size: 12px; color: var(--muted); }
+
+    .toast{
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 18px;
+      background: rgba(0,0,0,.70);
+      color: white;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.20);
+      box-shadow: var(--shadow);
+      opacity: 0;
+      pointer-events:none;
+      transition: opacity .2s ease, transform .2s ease;
+    }
+    .toast.show{
+      opacity: 1;
+      transform: translateX(-50%) translateY(-2px);
+    }
+    [data-theme="light"] .toast{ background: rgba(0,0,0,.80); }
+
+    .kbd{
+      font-size: 12px;
+      padding: 2px 6px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--muted);
+    }
+
+    /* streak / calendar */
+    .streakTop{
+      display:flex; align-items:flex-end; justify-content:space-between; gap:10px; flex-wrap:wrap;
+      margin-top: 8px;
+    }
+    .big{
+      font-size: 34px;
+      font-weight: 800;
+      letter-spacing: .2px;
+      line-height: 1;
+    }
+    .big small{
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--muted);
+      margin-left: 6px;
+    }
+    .calendar{
+      margin-top: 10px;
+      display:grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+    }
+    .cell{
+      aspect-ratio: 1 / 1;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-size: 12px;
+      color: var(--muted);
+      background: rgba(255,255,255,.03);
+      position: relative;
+      overflow:hidden;
+    }
+    .cell.done{
+      color: rgba(255,255,255,.92);
+      background: linear-gradient(135deg, rgba(34,197,94,.85), rgba(124,58,237,.70));
+      border-color: rgba(34,197,94,.45);
+    }
+    .cell .dot{
+      position:absolute;
+      bottom: 6px;
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.85);
+      opacity:.0;
+    }
+    .cell.done .dot{ opacity:.9; }
+    .legend{
+      display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top: 10px;
+    }
+    .tag{
+      display:flex; align-items:center; gap:8px;
+      font-size: 12px; color: var(--muted);
+      border:1px solid var(--line); border-radius: 999px; padding: 4px 10px;
+      background: rgba(255,255,255,.03);
+    }
+    .sw{
+      width: 10px; height: 10px; border-radius: 3px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.03);
+    }
+    .sw.done{ background: linear-gradient(135deg, rgba(34,197,94,.85), rgba(124,58,237,.70)); border-color: rgba(34,197,94,.45); }
+
+    /* mode switch */
+    .modeBox{
+      display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+      margin-top: 10px;
+      padding: 10px;
+      border:1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,.03);
+    }
+    .toggle{
+      display:flex; align-items:center; gap:10px;
+      font-size: 13px; color: var(--muted);
+    }
+    .switch{
+      width: 46px; height: 28px;
+      border-radius: 999px;
+      border:1px solid var(--line);
+      background: rgba(255,255,255,.06);
+      position: relative;
+      cursor:pointer;
+      flex: 0 0 auto;
+    }
+    .switch::after{
+      content:"";
+      width: 22px; height: 22px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.85);
+      position:absolute;
+      top: 2px; left: 2px;
+      transition: left .18s ease;
+    }
+    .switch.on{
+      background: rgba(124,58,237,.30);
+      border-color: rgba(124,58,237,.45);
+    }
+    .switch.on::after{ left: 22px; }
   </style>
 </head>
 <body>
-  <h1>1–3 главные цели</h1>
-  <p class="muted">Данные сохраняются на этом устройстве. Если не открывать страницу 48 часов — всё удалится.</p>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <div class="logo"></div>
+        <div>
+          <h1>Goal</h1>
+          <div class="sub">цели • ежедневный трек • streak • автоудаление через 48 часов без открытия</div>
+        </div>
+      </div>
 
-  <div class="box">
-    <div class="row">
-      <label>Цель 1</label>
-      <input id="g1" placeholder="Например: Плавать 3 раза в неделю" />
-    </div>
-    <div class="row">
-      <label>Цель 2</label>
-      <input id="g2" placeholder="Например: Делать зарядку 10 минут" />
-    </div>
-    <div class="row">
-      <label>Цель 3</label>
-      <input id="g3" placeholder="Например: 1 час фокус-работы" />
-    </div>
+      <div class="top-actions">
+        <button class="btn" id="themeBtn" title="Сменить тему">🌓 Тема</button>
+        <button class="btn" id="exportBtn" title="Скачать резервную копию">⬇️ Экспорт</button>
+        <label class="btn" title="Импорт из файла">
+          ⬆️ Импорт
+          <input id="importFile" type="file" accept="application/json" style="display:none">
+        </label>
+      </div>
+    </header>
 
-    <div class="row">
-      <label>Сегодняшняя отметка / дневник</label>
-      <textarea id="log" rows="6" placeholder="Что сделал сегодня по целям?"></textarea>
-    </div>
+    <div class="grid">
+      <section class="card">
+        <h2>Мои цели</h2>
+        <div class="muted">Запиши цели. Внизу — отметка за сегодня. <b>Ctrl+Enter</b> сохраняет запись.</div>
 
-    <div class="flex">
-      <button id="save">Сохранить</button>
-      <button id="clear">Удалить всё</button>
-      <span class="muted" id="status"></span>
+        <div class="modeBox">
+          <div>
+            <div style="font-weight:700;">Режим</div>
+            <div class="muted">Одна цель или три цели — чтобы не бесило лишнее.</div>
+          </div>
+          <div class="toggle">
+            <span>1 цель</span>
+            <div id="modeSwitch" class="switch" title="Переключить режим"></div>
+            <span>3 цели</span>
+          </div>
+        </div>
+
+        <div class="row goals" style="margin-top:12px;">
+          <div class="goal" data-goal="1">
+            <div class="goal-top">
+              <div class="pill">Цель 1</div>
+              <label class="small"><input type="checkbox" id="c1" /> Выполнено сегодня</label>
+            </div>
+            <input type="text" id="g1" placeholder="Например: плавать 3 раза в неделю" />
+          </div>
+
+          <div class="goal" data-goal="2">
+            <div class="goal-top">
+              <div class="pill">Цель 2</div>
+              <label class="small"><input type="checkbox" id="c2" /> Выполнено сегодня</label>
+            </div>
+            <input type="text" id="g2" placeholder="Например: зарядка 10 минут" />
+          </div>
+
+          <div class="goal" data-goal="3">
+            <div class="goal-top">
+              <div class="pill">Цель 3</div>
+              <label class="small"><input type="checkbox" id="c3" /> Выполнено сегодня</label>
+            </div>
+            <input type="text" id="g3" placeholder="Например: 1 час фокус-работы" />
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:12px;">
+          <div class="two">
+            <div>
+              <div class="small" style="margin-bottom:6px;">Прогресс за сегодня</div>
+              <div class="bar"><div id="barFill"></div></div>
+              <div class="small" id="barText" style="margin-top:6px;">0/3</div>
+            </div>
+            <div>
+              <div class="small" style="margin-bottom:6px;">Хранение</div>
+              <div class="pill" id="ttlInfo">—</div>
+              <div class="small" id="lastOpen">—</div>
+            </div>
+          </div>
+
+          <div>
+            <div class="small" style="margin-bottom:6px;">Отметка за сегодня</div>
+            <textarea id="log" placeholder="Что сделал сегодня по целям?"></textarea>
+            <div class="small" style="margin-top:6px;">
+              <span class="kbd">Ctrl</span> + <span class="kbd">Enter</span> — сохранить запись
+            </div>
+          </div>
+
+          <div class="two">
+            <button class="btn primary" id="saveBtn">✅ Сохранить запись</button>
+            <button class="btn danger" id="clearBtn">🗑️ Удалить всё</button>
+          </div>
+
+          <div class="muted" id="status">—</div>
+        </div>
+      </section>
+
+      <aside class="card">
+        <h2>Цепочка (streak)</h2>
+        <div class="muted">
+          День засчитывается, если сохранена запись и выполнено хотя бы одно “Выполнено сегодня”.
+        </div>
+
+        <div class="streakTop">
+          <div class="big" id="streakNum">0 <small>дней</small></div>
+          <div class="pill" id="streakHint">Начни сегодня 🙂</div>
+        </div>
+
+        <div class="legend">
+          <div class="tag"><span class="sw done"></span> засчитан</div>
+          <div class="tag"><span class="sw"></span> нет</div>
+          <div class="tag" id="monthTag">последние 28 дней</div>
+        </div>
+
+        <div class="calendar" id="calendar"></div>
+
+        <h2 style="margin-top:16px;">История</h2>
+        <div class="muted">Последние 10 записей.</div>
+        <div class="hist" id="history"></div>
+      </aside>
     </div>
   </div>
 
-  <div class="box">
-    <h3>История (последние записи)</h3>
-    <div id="history" class="muted"></div>
-  </div>
+  <div class="toast" id="toast"></div>
 
 <script>
-  const KEY = "goals_app_v1";
-  const TTL_MS = 48 * 60 * 60 * 1000; // 48 часов
+  const KEY = "goal_app_v3";
+  const TTL_MS = 48 * 60 * 60 * 1000;
 
-  const el = (id) => document.getElementById(id);
+  const $ = (id) => document.getElementById(id);
 
-  function now() { return Date.now(); }
+  function todayKey(){
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,"0");
+    const day = String(d.getDate()).padStart(2,"0");
+    return `${y}-${m}-${day}`;
+  }
 
-  function loadState() {
+  function ymdFromMs(ms){
+    const d = new Date(ms);
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,"0");
+    const day = String(d.getDate()).padStart(2,"0");
+    return `${y}-${m}-${day}`;
+  }
+
+  function addDays(ymd, delta){
+    const [y,m,d] = ymd.split("-").map(Number);
+    const dt = new Date(y, m-1, d);
+    dt.setDate(dt.getDate() + delta);
+    return ymdFromMs(dt.getTime());
+  }
+
+  function load(){
     const raw = localStorage.getItem(KEY);
     return raw ? JSON.parse(raw) : null;
   }
-
-  function saveState(state) {
-    localStorage.setItem(KEY, JSON.stringify(state));
+  function save(s){
+    localStorage.setItem(KEY, JSON.stringify(s));
   }
-
-  function clearState() {
+  function clearAll(){
     localStorage.removeItem(KEY);
   }
-
-  function expired(state) {
-    if (!state?.lastOpenAt) return false;
-    return (now() - state.lastOpenAt) > TTL_MS;
+  function expired(s){
+    if (!s?.lastOpenAt) return false;
+    return (Date.now() - s.lastOpenAt) > TTL_MS;
   }
 
-  function render(state) {
-    el("g1").value = state?.goals?.[0] ?? "";
-    el("g2").value = state?.goals?.[1] ?? "";
-    el("g3").value = state?.goals?.[2] ?? "";
-    el("log").value = "";
-
-    const hist = (state?.entries ?? []).slice().reverse().slice(0, 10);
-    el("history").innerHTML = hist.length
-      ? hist.map(e => `<div style="margin:8px 0;"><b>${new Date(e.at).toLocaleString()}</b><br>${escapeHtml(e.text)}</div>`).join("")
-      : "Пока записей нет.";
+  function escapeHtml(str){
+    return String(str)
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;");
   }
 
-  function escapeHtml(s) {
-    return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
+  function showToast(msg){
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    setTimeout(()=> t.classList.remove("show"), 1400);
   }
 
-  // При открытии: проверить истечение и обновить lastOpenAt
-  let state = loadState();
-  if (state && expired(state)) {
-    clearState();
-    state = null;
-  }
-  state = state ?? { goals: ["","",""], entries: [], lastOpenAt: now() };
-  state.lastOpenAt = now();
-  saveState(state);
-  render(state);
-
-  el("status").textContent = "Последний визит обновлён: " + new Date(state.lastOpenAt).toLocaleString();
-
-  el("save").addEventListener("click", () => {
-    const goals = [el("g1").value.trim(), el("g2").value.trim(), el("g3").value.trim()];
-    const text = el("log").value.trim();
-
-    state.goals = goals;
-    if (text) state.entries.push({ at: now(), text });
-    state.lastOpenAt = now();
-
-    saveState(state);
-    render(state);
-    el("status").textContent = "Сохранено: " + new Date(state.lastOpenAt).toLocaleString();
+  // state
+  const stateDefault = () => ({
+    goals: ["", "", ""],
+    entries: [], // { at, text, goalsText, checks:[..], day:"YYYY-MM-DD" }
+    lastOpenAt: Date.now(),
+    theme: "dark",
+    mode: "3", // "1" or "3"
+    todayChecks: { date: todayKey(), c: [false,false,false] }
   });
 
-  el("clear").addEventListener("click", () => {
-    clearState();
-    state = { goals: ["","",""], entries: [], lastOpenAt: now() };
-    saveState(state);
-    render(state);
-    el("status").textContent = "Удалено.";
+  let S = load();
+  if (S && expired(S)) { clearAll(); S = null; }
+  S = S ?? stateDefault();
+
+  // day rollover for checkboxes
+  if (!S.todayChecks || S.todayChecks.date !== todayKey()){
+    S.todayChecks = { date: todayKey(), c:[false,false,false] };
+  }
+
+  S.lastOpenAt = Date.now();
+  save(S);
+
+  // theme
+  function applyTheme(){
+    document.documentElement.setAttribute("data-theme", S.theme === "light" ? "light" : "dark");
+  }
+  applyTheme();
+
+  // mode
+  function applyModeUI(){
+    const is3 = (S.mode === "3");
+    $("modeSwitch").classList.toggle("on", is3); // on = 3 goals
+    document.querySelectorAll('.goal[data-goal="2"], .goal[data-goal="3"]').forEach(el=>{
+      el.style.display = is3 ? "" : "none";
+    });
+    // если режим 1 цель — сбрасываем лишние чекбоксы в UI (но не трогаем историю)
+    if(!is3){
+      $("c2").checked = false;
+      $("c3").checked = false;
+      S.todayChecks.c[1] = false;
+      S.todayChecks.c[2] = false;
+      save(S);
+    }
+    renderProgress();
+  }
+
+  // UI -> state
+  function syncFromUI(){
+    S.goals = [ $("g1").value, $("g2").value, $("g3").value ].map(v => v.trim());
+    S.todayChecks.c = [ $("c1").checked, $("c2").checked, $("c3").checked ];
+    if (S.mode === "1"){
+      S.todayChecks.c[1] = false;
+      S.todayChecks.c[2] = false;
+    }
+    S.lastOpenAt = Date.now();
+    save(S);
+    renderMeta();
+    renderProgress();
+  }
+
+  function renderMeta(){
+    const last = new Date(S.lastOpenAt);
+    $("lastOpen").textContent = "Последний визит: " + last.toLocaleString();
+
+    const leftMs = Math.max(0, TTL_MS - (Date.now() - S.lastOpenAt));
+    const h = Math.floor(leftMs / (60*60*1000));
+    const m = Math.floor((leftMs % (60*60*1000)) / (60*1000));
+    $("ttlInfo").textContent = `Удаление через ~${h}ч ${m}м без открытия`;
+  }
+
+  function activeGoalCount(){
+    return (S.mode === "1") ? 1 : 3;
+  }
+
+  function renderProgress(){
+    const total = activeGoalCount();
+    const done = S.todayChecks.c.slice(0,total).filter(Boolean).length;
+    const pct = Math.round((done/total)*100);
+    $("barFill").style.width = pct + "%";
+    $("barText").textContent = `${done}/${total} • ${pct}%`;
+  }
+
+  function renderHistory(){
+    const list = (S.entries ?? []).slice().reverse().slice(0,10);
+    $("history").innerHTML = list.length
+      ? list.map(e => `
+        <div class="entry">
+          <b>${new Date(e.at).toLocaleString()}</b>
+          <div class="small">${escapeHtml(e.goalsText || "")}</div>
+          <div class="small">Отметки: ${escapeHtml((e.checks || []).map((v,i)=> v ? `#${i+1}✅` : `#${i+1}—`).join(" "))}</div>
+          <div style="margin-top:8px;">${escapeHtml(e.text)}</div>
+        </div>
+      `).join("")
+      : `<div class="muted">Пока записей нет. Нажми “Сохранить запись”.</div>`;
+  }
+
+  // streak logic:
+  // день засчитывается если есть запись за этот day и хотя бы одна галочка true (в рамках режима на тот день)
+  function buildDoneDaysSet(){
+    const done = new Set();
+    for(const e of (S.entries ?? [])){
+      const day = e.day || ymdFromMs(e.at);
+      const checks = Array.isArray(e.checks) ? e.checks : [];
+      // учитываем только первую цель, если в тот день режим был "1"
+      const modeThatDay = e.mode || "3";
+      const total = (modeThatDay === "1") ? 1 : 3;
+      const ok = checks.slice(0,total).some(Boolean);
+      if(ok) done.add(day);
+    }
+    return done;
+  }
+
+  function computeStreak(doneSet){
+    const today = todayKey();
+    let streak = 0;
+    let cursor = today;
+    while(doneSet.has(cursor)){
+      streak++;
+      cursor = addDays(cursor, -1);
+    }
+    return { streak, hasToday: doneSet.has(today) };
+  }
+
+  function renderCalendar(doneSet){
+    const days = [];
+    const today = todayKey();
+    // последние 28 дней включая сегодня, от старых к новым
+    for(let i=27; i>=0; i--){
+      const d = addDays(today, -i);
+      days.push(d);
+    }
+    $("calendar").innerHTML = days.map(d=>{
+      const dd = Number(d.slice(8,10));
+      const cls = doneSet.has(d) ? "cell done" : "cell";
+      return `<div class="${cls}" title="${d}">${dd}<span class="dot"></span></div>`;
+    }).join("");
+  }
+
+  function renderStreak(){
+    const doneSet = buildDoneDaysSet();
+    const { streak, hasToday } = computeStreak(doneSet);
+
+    const word = (n)=>{
+      const n10 = n % 10, n100 = n % 100;
+      if(n100 >= 11 && n100 <= 14) return "дней";
+      if(n10 === 1) return "день";
+      if(n10 >= 2 && n10 <= 4) return "дня";
+      return "дней";
+    };
+
+    $("streakNum").innerHTML = `${streak} <small>${word(streak)}</small>`;
+    $("streakHint").textContent = hasToday ? "Сегодня засчитан ✅" : "Сегодня ещё не засчитан";
+    renderCalendar(doneSet);
+  }
+
+  function renderAll(){
+    $("g1").value = S.goals?.[0] ?? "";
+    $("g2").value = S.goals?.[1] ?? "";
+    $("g3").value = S.goals?.[2] ?? "";
+    $("c1").checked = !!S.todayChecks?.c?.[0];
+    $("c2").checked = !!S.todayChecks?.c?.[1];
+    $("c3").checked = !!S.todayChecks?.c?.[2];
+    $("log").value = "";
+    renderMeta();
+    applyModeUI();
+    renderHistory();
+    renderStreak();
+    $("status").textContent = "Автосохранение включено.";
+  }
+  renderAll();
+
+  // autosave
+  ["g1","g2","g3","c1","c2","c3"].forEach(id=>{
+    $(id).addEventListener("input", syncFromUI);
+    $(id).addEventListener("change", syncFromUI);
   });
+
+  // mode switch
+  $("modeSwitch").addEventListener("click", ()=>{
+    S.mode = (S.mode === "3") ? "1" : "3";
+    save(S);
+    applyModeUI();
+    showToast(S.mode === "1" ? "Режим: 1 цель" : "Режим: 3 цели");
+  });
+
+  // save entry
+  function saveEntry(){
+    syncFromUI();
+    const text = $("log").value.trim();
+    if(!text){
+      showToast("Напиши короткую отметку 🙂");
+      return;
+    }
+
+    const modeNow = S.mode;
+    const total = activeGoalCount();
+    const checksNow = S.todayChecks.c.slice(0,total);
+
+    const goalsText = S.goals
+      .slice(0,total)
+      .filter(Boolean)
+      .map((g,i)=>`#${i+1} ${g}`)
+      .join(" • ");
+
+    S.entries.push({
+      at: Date.now(),
+      day: todayKey(),
+      text,
+      goalsText,
+      checks: checksNow.concat(total===1 ? [] : []),
+      mode: modeNow
+    });
+
+    S.lastOpenAt = Date.now();
+    save(S);
+    $("log").value = "";
+    renderMeta();
+    renderHistory();
+    renderStreak();
+    $("status").textContent = "Запись сохранена.";
+    showToast("Сохранено ✅");
+  }
+
+  $("saveBtn").addEventListener("click", saveEntry);
+  $("log").addEventListener("keydown", (e)=>{
+    if((e.ctrlKey || e.metaKey) && e.key === "Enter"){
+      e.preventDefault();
+      saveEntry();
+    }
+  });
+
+  // clear
+  $("clearBtn").addEventListener("click", ()=>{
+    const ok = confirm("Точно удалить ВСЕ цели, историю и streak на этом устройстве?");
+    if(!ok) return;
+    clearAll();
+    S = stateDefault();
+    save(S);
+    applyTheme();
+    renderAll();
+    showToast("Удалено");
+  });
+
+  // theme toggle
+  $("themeBtn").addEventListener("click", ()=>{
+    S.theme = (S.theme === "light") ? "dark" : "light";
+    save(S);
+    applyTheme();
+    showToast(S.theme === "light" ? "Светлая тема" : "Тёмная тема");
+  });
+
+  // export/import
+  $("exportBtn").addEventListener("click", ()=>{
+    const blob = new Blob([JSON.stringify(S, null, 2)], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "goal-backup.json";
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast("Экспорт готов");
+  });
+
+  $("importFile").addEventListener("change", async (e)=>{
+    const f = e.target.files?.[0];
+    if(!f) return;
+    try{
+      const txt = await f.text();
+      const data = JSON.parse(txt);
+      if(!data || typeof data !== "object") throw new Error("bad");
+      S = { ...stateDefault(), ...data };
+      if(!S.todayChecks || S.todayChecks.date !== todayKey()){
+        S.todayChecks = { date: todayKey(), c:[false,false,false] };
+      }
+      S.lastOpenAt = Date.now();
+      save(S);
+      applyTheme();
+      renderAll();
+      showToast("Импортировано ✅");
+    }catch(err){
+      alert("Не получилось импортировать файл. Проверь, что это goal-backup.json");
+    }finally{
+      e.target.value = "";
+    }
+  });
+
+  // update ttl every minute
+  setInterval(()=>{ renderMeta(); }, 60_000);
 </script>
 </body>
 </html>
-
