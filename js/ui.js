@@ -33,6 +33,13 @@ export function bindUI() {
     history: el("history"),
 
     toast: el("toast"),
+	
+	authModal: el("authModal"),
+    authEmail: el("authEmail"),
+    sendLinkBtn: el("sendLinkBtn"),
+    closeAuthBtn: el("closeAuthBtn"),
+    authStatus: el("authStatus"),
+
   };
 }
 
