@@ -385,9 +385,11 @@
     setTimeout(()=> t.classList.remove("show"), 1400);
   }
 
-  const sb = (SUPABASE_URL.startsWith("http") && SUPABASE_ANON_KEY.length > 20)
-    ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
-    : null;
+  const sb = (window.supabase
+	&& SUPABASE_URL.startsWith("http")
+	&& SUPABASE_ANON_KEY.length > 20)
+	? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+	: null;
 
   let currentUser = null;
 
@@ -930,5 +932,6 @@
 
 </body>
 </html>
+
 
 
