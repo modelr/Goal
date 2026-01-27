@@ -344,6 +344,7 @@
 		alert("JS ERROR: " + m + "\n" + src + ":" + line + ":" + col);
 	};
 	window.addEventListener("unhandledrejection", (e) => {
+		if (String(e.reason?.name || "").includes("AbortError") || String(e.reason || "").includes("AbortError")) return;
 		const msg = String(e.reason?.message || e.reason || "");
 		alert("PROMISE ERROR: " + msg);
 	});
@@ -402,25 +403,32 @@
   let currentUser = null;
 
   async function refreshAuthUI(){
-    if(!sb){
-      $("authBadge").textContent = "Оффлайн";
-      $("loginBtn").style.display = "";
-      $("logoutBtn").style.display = "none";
-      return;
-    }
-    const { data } = await sb.auth.getUser();
-    currentUser = data?.user ?? null;
+	if(!sb){
+		$("authBadge").textContent = "Оффлайн";
+		$("loginBtn").style.display = "";
+		$("logoutBtn").style.display = "none";
+		currentUser = null;
+		return;
+	}
 
-    if(currentUser){
-      $("authBadge").textContent = "Вход: " + (currentUser.email || "ok");
-      $("loginBtn").style.display = "none";
-      $("logoutBtn").style.display = "";
-    }else{
-      $("authBadge").textContent = "Оффлайн";
-      $("loginBtn").style.display = "";
-      $("logoutBtn").style.display = "none";
-    }
-  }
+	try{
+		const { data } = await sb.auth.getUser();
+		currentUser = data?.user ?? null;
+	}catch(e){
+		console.warn("auth getUser failed, fallback to offline:", e);
+		currentUser = null; // важно
+	}
+
+	if(currentUser){
+		$("authBadge").textContent = "Вход: " + (currentUser.email || "ok");
+		$("loginBtn").style.display = "none";
+		$("logoutBtn").style.display = "";
+	}else{
+		$("authBadge").textContent = "Оффлайн";
+		$("loginBtn").style.display = "";
+		$("logoutBtn").style.display = "none";
+	}
+	}
 
   let remoteSaveTimer = null;
   async function scheduleRemoteSave(state){
@@ -778,27 +786,37 @@
     if(sb){
       await refreshAuthUI();
       if(currentUser){
-        const remote = await remoteLoad();
-        if(remote){
-          if(expired(remote)){
-            await remoteClear();
-            S = stateDefault();
-            S.lastOpenAt = now();
-            saveState(S);
-          }else{
-            S = remote;
-            if (!S.todayChecks || S.todayChecks.date !== todayKey()){
-              S.todayChecks = { date: todayKey(), byId: {} };
-            }
-            if (!S.todayChecks.byId) S.todayChecks.byId = {};
-            if (!S.stake) S.stake = stateDefault().stake;
-            if (!Array.isArray(S.dailyGoals)) S.dailyGoals = stateDefault().dailyGoals;
-            if (!Array.isArray(S.entries)) S.entries = [];
-            S.lastOpenAt = now();
-            saveState(S);
-          }
-          return;
-        }
+        let remote = null;
+			try{
+				remote = await remoteLoad();
+			}catch(e){
+				console.warn("remoteLoad failed, continue offline:", e);
+			}
+
+			if (remote) {
+				if (expired(remote)) {
+					await remoteClear();
+					S = stateDefault();
+					S.lastOpenAt = now();
+					saveState(S);
+				} else {
+					S = remote;
+
+					if (!S.todayChecks || S.todayChecks.date !== todayKey()) {
+					S.todayChecks = { date: todayKey(), byId: {} };
+					}
+					if (!S.todayChecks.byId) S.todayChecks.byId = {};
+
+					if (!S.stake) S.stake = stateDefault().stake;
+					if (!Array.isArray(S.dailyGoals) || S.dailyGoals.length === 0) S.dailyGoals = stateDefault().dailyGoals;
+					if (!Array.isArray(S.entries)) S.entries = [];
+
+					S.lastOpenAt = now();
+					saveState(S);
+				}
+				return;
+			}
+
 
         if(local){
           S = local;
@@ -831,7 +849,9 @@
     sb.auth.onAuthStateChange(async ()=>{
       await refreshAuthUI();
       if(currentUser){
-        const remote = await remoteLoad();
+        let remote = null;
+		try{ remote = await remoteLoad(); }
+		catch(e){ console.warn("remoteLoad failed in auth change:", e); remote = null; }
         if(remote){
           S = remote;
           if (!S.todayChecks || S.todayChecks.date !== todayKey()){
@@ -937,11 +957,16 @@
   }
 
   (async ()=>{
-    await loadInitialState();
-    await refreshAuthUI();
-    renderAll();
-    setInterval(renderMeta, 60_000);
+	try{
+		await loadInitialState();
+		await refreshAuthUI();
+	}catch(e){
+		console.warn("boot failed, render anyway:", e);
+	}
+	renderAll();                 // <-- всегда
+	setInterval(renderMeta, 60_000);
   })();
+
 </script>
 
 </body>
