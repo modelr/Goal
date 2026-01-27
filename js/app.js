@@ -153,18 +153,21 @@ function wireEvents() {
   });
 
   ui.btnLogin.addEventListener("click", () => {
-  if (!supabase) return toast(ui, "Supabase не настроен (URL/KEY)");
-  if (!ui.authModal) return toast(ui, "Нет модалки authModal в index.html");
+    if (!supabase) return toast(ui, "Supabase не настроен (URL/KEY)");
+    if (!ui.authModal) return toast(ui, "Нет модалки authModal в index.html");
 
-  ui.authModal.hidden = false;
-  ui.authStatus.textContent = "—";
-  ui.authEmail.value = "";
-  ui.authEmail.focus();
+    ui.authModal.hidden = false;
+    ui.authModal.classList.add("show");
+    ui.authEmail.value = "";
+    ui.authEmail.focus();
+    if (ui.authStatus) ui.authStatus.textContent = "—";
+
   });
 
     // auth modal: close button
   if (ui.closeAuthBtn && ui.authModal) {
     ui.closeAuthBtn.addEventListener("click", () => {
+      ui.authModal.classList.remove("show");
       ui.authModal.hidden = true;
     });
   }
@@ -198,11 +201,15 @@ function wireEvents() {
   }
 
   // click on backdrop closes modal
+
   if (ui.authModal) {
-    ui.authModal.addEventListener("click", (e) => {
-      if (e.target === ui.authModal) ui.authModal.hidden = true;
-    });
-  }
+  ui.authModal.addEventListener("click", (e) => {
+    if (e.target === ui.authModal) {
+      ui.authModal.classList.remove("show");
+      ui.authModal.hidden = true;
+    }
+  });
+}
 
 
   ui.btnTheme.addEventListener("click", () => {
