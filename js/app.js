@@ -188,7 +188,9 @@ async function persist() {
   saving = true;
   const res = await saveState({ supabase, userId: user?.id || null, state });
   mode = res.mode === "remote" ? "remote" : mode; // не откатываем UI лишний раз
-  setModeInfo(ui, user ? "remote" : "local", user);
+  const res = await saveState({ state, userId });
+  setModeInfo(ui, res.mode, user);
+  if (res.error) console.warn("Supabase save failed:", res.error);
   saving = false;
   return res;
 }
