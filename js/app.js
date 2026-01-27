@@ -186,6 +186,8 @@ function wireEvents() {
 
       if (ui.authStatus) ui.authStatus.textContent = "Отправляю ссылку…";
 
+	  history.replaceState(null, "", window.location.origin + window.location.pathname);
+
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: { emailRedirectTo: window.location.origin + window.location.pathname }
