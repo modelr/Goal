@@ -521,7 +521,6 @@
     S.stake.text = $("stakeText").value;
     S.lastOpenAt = now();
     saveState(S);
-    renderStake();
     renderMeta();
   }
 
@@ -712,7 +711,7 @@
   }
 
   function saveEntry(){
-    S.stake.text = $("stakeText").value.trim();
+    S.stake.text = $("stakeText").value;
     const text = $("log").value.trim();
     if(!text){
       showToast("Напиши отметку за сегодня 🙂");
