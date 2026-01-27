@@ -340,6 +340,14 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
 <script>
+	window.onerror = (m, src, line, col, err) => {
+		alert("JS ERROR: " + m + "\n" + src + ":" + line + ":" + col);
+	};
+	window.addEventListener("unhandledrejection", (e) => {
+		const msg = String(e.reason?.message || e.reason || "");
+		alert("PROMISE ERROR: " + msg);
+	});
+
   // 1) ВСТАВЬ СЮДА свои значения из Supabase Project Settings -> API
   const SUPABASE_URL = "https://uivsrhkdlybqyvwkdbwr.supabase.co";
   const SUPABASE_ANON_KEY = "sb_publishable_wetDio_DGN89fiXTYx8heQ_mRCdfWgX";
@@ -454,10 +462,17 @@
     await sb.from(SUPABASE_TABLE).delete().eq("user_id", currentUser.id);
   }
 
-  function loadLocal(){
-    const raw = localStorage.getItem(KEY);
-    return raw ? JSON.parse(raw) : null;
-  }
+   function loadLocal(){
+	try{
+		const raw = localStorage.getItem(KEY);
+		return raw ? JSON.parse(raw) : null;
+	  }catch(e){
+		console.warn("Bad local cache, clearing:", e);
+		clearLocal();
+		return null;
+	  }
+	}
+
   function saveLocal(s){
     localStorage.setItem(KEY, JSON.stringify(s));
   }
@@ -531,7 +546,7 @@
   function syncDailyGoalText(id, text){
     const g = S.dailyGoals.find(x => x.id === id);
     if(!g) return;
-    g.text = text.trim;
+    g.text = text;
     S.lastOpenAt = now();
     saveState(S);
     renderProgress();
