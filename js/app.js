@@ -152,17 +152,58 @@ function wireEvents() {
     e.target.value = "";
   });
 
-  ui.btnLogin.addEventListener("click", async () => {
-    if (!supabase) return alert("Supabase не настроен (URL/KEY)");
-    const email = prompt("Email для входа (magic link):");
-    if (!email) return;
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.href }
-    });
-    if (error) alert(error.message);
-    else toast(ui, "Отправил ссылку на почту");
+  ui.btnLogin.addEventListener("click", () => {
+  if (!supabase) return toast(ui, "Supabase не настроен (URL/KEY)");
+  if (!ui.authModal) return toast(ui, "Нет модалки authModal в index.html");
+
+  ui.authModal.hidden = false;
+  ui.authStatus.textContent = "—";
+  ui.authEmail.value = "";
+  ui.authEmail.focus();
   });
+
+    // auth modal: close button
+  if (ui.closeAuthBtn && ui.authModal) {
+    ui.closeAuthBtn.addEventListener("click", () => {
+      ui.authModal.hidden = true;
+    });
+  }
+
+  // auth modal: send magic link
+  if (ui.sendLinkBtn && ui.authEmail) {
+    ui.sendLinkBtn.addEventListener("click", async () => {
+      if (!supabase) return;
+
+      const email = (ui.authEmail.value || "").trim();
+      if (!email) {
+        if (ui.authStatus) ui.authStatus.textContent = "Введите email";
+        ui.authEmail.focus();
+        return;
+      }
+
+      if (ui.authStatus) ui.authStatus.textContent = "Отправляю ссылку…";
+
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: window.location.href }
+      });
+
+      if (error) {
+        if (ui.authStatus) ui.authStatus.textContent = "Ошибка: " + (error.message || String(error));
+        return;
+      }
+
+      if (ui.authStatus) ui.authStatus.textContent = "Ссылка отправлена. Проверь почту.";
+    });
+  }
+
+  // click on backdrop closes modal
+  if (ui.authModal) {
+    ui.authModal.addEventListener("click", (e) => {
+      if (e.target === ui.authModal) ui.authModal.hidden = true;
+    });
+  }
+
 
   ui.btnTheme.addEventListener("click", () => {
     document.documentElement.classList.toggle("light");
