@@ -501,7 +501,7 @@
   }
 
   function syncStakeFromUI(){
-    S.stake.text = $("stakeText").value;
+    S.stake.text = $("stakeText").value.trim();
     S.lastOpenAt = now();
     saveState(S);
     renderStake();
@@ -529,7 +529,7 @@
   function syncDailyGoalText(id, text){
     const g = S.dailyGoals.find(x => x.id === id);
     if(!g) return;
-    g.text = text;
+    g.text = text.trim();
     S.lastOpenAt = now();
     saveState(S);
     renderProgress();
@@ -701,7 +701,7 @@
       showToast("Напиши отметку за сегодня 🙂");
       return;
     }
-    const goalsSnapshot = S.dailyGoals.map(g => ({ id: g.id, text: (g.text || "").trim(), done: getCheck(g.id) }));
+    const goalsSnapshot = S.dailyGoals.map(g => ({ id: g.id, text: g.text || "", done: getCheck(g.id) }));
     S.entries.push({ type: "entry", at: now(), day: todayKey(), text, goalsSnapshot, stakeText: S.stake.text || "", stakeDone: !!S.stake.done });
     S.lastOpenAt = now();
     saveState(S);
