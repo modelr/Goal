@@ -7,7 +7,7 @@ export const APP = {
 
 export const SUPABASE = {
   // Вставь свои значения:
-  URL: "https://YOUR_PROJECT.supabase.co",
-  ANON_KEY: "YOUR_ANON_KEY",
-  TABLE: "goal_states",
+  URL: "https://uivsrhkdlybqyvwkdbwr.supabase.co",
+  ANON_KEY: "sb_publishable_wetDio_DGN89fiXTYx8heQ_mRCdfWgX",
+  TABLE: "goal_state",
 };
