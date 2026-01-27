@@ -425,3 +425,23 @@ textarea{
 
 /* File input label helper */
 .file input{ display:none; }
+.modalBackdrop{
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+  background: rgba(0,0,0,.55);
+  z-index: 50;
+}
+.modal{
+  width: min(520px, 100%);
+  background: var(--card, #111);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 18px;
+  padding: 16px;
+  box-shadow: 0 12px 40px rgba(0,0,0,.35);
+}
+.modalRow{ display: grid; gap: 10px; }
+
