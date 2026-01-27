@@ -780,69 +780,64 @@
   });
 
   async function loadInitialState(){
+    console.log("--- DEBUG START ---");
     let local = loadLocal();
-    if(local && expired(local)) local = null;
+    console.log("Local storage data:", local);
+    
+    if(local && expired(local)) {
+        console.log("Local data expired (48h+). Clearing.");
+        local = null;
+    }
 
     if(sb){
-      await refreshAuthUI();
-      if(currentUser){
-        let remote = null;
-			try{
-				remote = await remoteLoad();
-			}catch(e){
-				console.warn("remoteLoad failed, continue offline:", e);
-			}
+        await refreshAuthUI();
+        console.log("Current User:", currentUser);
+        if(currentUser){
+            let remote = null;
+            try{
+                remote = await remoteLoad();
+                console.log("Remote (Supabase) data:", remote);
+            }catch(e){
+                console.warn("remoteLoad failed:", e);
+            }
 
-			if (remote) {
-				if (expired(remote)) {
-					await remoteClear();
-					S = stateDefault();
-					S.lastOpenAt = now();
-					saveState(S);
-				} else {
-					S = remote;
-
-					if (!S.todayChecks || S.todayChecks.date !== todayKey()) {
-					S.todayChecks = { date: todayKey(), byId: {} };
-					}
-					if (!S.todayChecks.byId) S.todayChecks.byId = {};
-
-					if (!S.stake) S.stake = stateDefault().stake;
-					if (!Array.isArray(S.dailyGoals) || S.dailyGoals.length === 0) S.dailyGoals = stateDefault().dailyGoals;
-					if (!Array.isArray(S.entries)) S.entries = [];
-
-					S.lastOpenAt = now();
-					saveState(S);
-				}
-				return;
-			}
-
-
-        if(local){
-          S = local;
-          S.lastOpenAt = now();
-          saveState(S);
-          return;
+            if (remote) {
+                if (expired(remote)) {
+                    console.log("Remote data expired. Clearing remote.");
+                    await remoteClear();
+                    S = stateDefault();
+                } else {
+                    console.log("Using Remote data.");
+                    S = remote;
+                    // Исправление возможных пустых полей
+                    if (!S.todayChecks || S.todayChecks.date !== todayKey()) S.todayChecks = { date: todayKey(), byId: {} };
+                    if (!S.stake) S.stake = stateDefault().stake;
+                    if (!Array.isArray(S.dailyGoals) || S.dailyGoals.length === 0) S.dailyGoals = stateDefault().dailyGoals;
+                    if (!Array.isArray(S.entries)) S.entries = [];
+                }
+                S.lastOpenAt = now();
+                saveState(S);
+                console.log("Final State (Remote path):", S);
+                return;
+            }
         }
-
-        S = stateDefault();
-        S.lastOpenAt = now();
-        saveState(S);
-        return;
-      }
     }
 
     if(local){
-      S = local;
-    }else{
-      S = stateDefault();
+        console.log("Using Local data.");
+        S = local;
+    } else {
+        console.log("No data found. Using Default State.");
+        S = stateDefault();
     }
-    if (S && expired(S)) S = stateDefault();
+
     if (!S.todayChecks || S.todayChecks.date !== todayKey()){
-      S.todayChecks = { date: todayKey(), byId: {} };
+        S.todayChecks = { date: todayKey(), byId: {} };
     }
     S.lastOpenAt = now();
     saveState(S);
+    console.log("Final State (Local/Default path):", S);
+    console.log("--- DEBUG END ---");
   }
 
   if(sb){
