@@ -27,6 +27,7 @@ async function boot() {
   const init = await loadInitialState({ supabase });
   state = normalizeState(init.state);
   user = init.user;
+  if (ui.btnLogin) ui.btnLogin.textContent = user ? "🚪 Выйти" : "🔐 Войти";
   mode = init.mode;
 
   setModeInfo(ui, mode, user);
@@ -38,6 +39,7 @@ async function boot() {
   if (supabase) {
     supabase.auth.onAuthStateChange(async (_event, session) => {
       user = session?.user || null;
+	  if (ui.btnLogin) ui.btnLogin.textContent = user ? "🚪 Выйти" : "🔐 Войти";
       const init2 = await loadInitialState({ supabase });
       state = normalizeState(init2.state);
       mode = init2.mode;
@@ -152,17 +154,29 @@ function wireEvents() {
     e.target.value = "";
   });
 
-  ui.btnLogin.addEventListener("click", () => {
-    if (!supabase) return toast(ui, "Supabase не настроен (URL/KEY)");
-    if (!ui.authModal) return toast(ui, "Нет модалки authModal в index.html");
+  ui.btnLogin.addEventListener("click", async () => {
+  if (!supabase) return toast(ui, "Supabase не настроен (URL/KEY)");
 
-    ui.authModal.hidden = false;
-    ui.authModal.classList.add("show");
-    ui.authEmail.value = "";
-    ui.authEmail.focus();
-    if (ui.authStatus) ui.authStatus.textContent = "—";
+  // Если уже залогинен — делаем "Выйти"
+  const { data } = await supabase.auth.getUser();
+  if (data?.user) {
+    await supabase.auth.signOut();
+    return;
+  }
 
+  // Чистим URL от старых #error...
+  history.replaceState(null, "", window.location.origin + window.location.pathname);
+
+  const redirectTo = window.location.origin + window.location.pathname;
+
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo },
   });
+
+  if (error) toast(ui, "Ошибка входа: " + (error.message || String(error)));
+});
+
 
     // auth modal: close button
   if (ui.closeAuthBtn && ui.authModal) {
