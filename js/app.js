@@ -188,7 +188,7 @@ function wireEvents() {
 
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: window.location.href }
+        options: { emailRedirectTo: window.location.origin + window.location.pathname }
       });
 
       if (error) {
