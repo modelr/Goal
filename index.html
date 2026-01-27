@@ -92,6 +92,25 @@
     </main>
 
     <div id="toast" class="toast" hidden></div>
+	<div class="modalBackdrop" id="authModal" hidden>
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+    <h3 id="authTitle">Вход</h3>
+    <p class="muted">
+      Введи email — придёт письмо со ссылкой. Открой её на этом устройстве.
+      <br />После входа данные синхронизируются.
+    </p>
+
+    <div class="modalRow">
+      <input type="email" id="authEmail" class="input" placeholder="email@example.com" />
+      <div class="row">
+        <button class="btn purple" id="sendLinkBtn">✉️ Отправить ссылку</button>
+        <button class="btn" id="closeAuthBtn">Закрыть</button>
+      </div>
+      <div class="muted small" id="authStatus">—</div>
+    </div>
+  </div>
+</div>
+
   </div>
 
   <!-- libs -->
