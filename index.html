@@ -366,6 +366,13 @@
   const $ = (id) => document.getElementById(id);
   function now(){ return Date.now(); }
 
+  function withTimeout(promise, ms){
+	return Promise.race([
+     promise,
+     new Promise((resolve)=> setTimeout(()=> resolve("__timeout__"), ms))
+   ]);
+  }
+
 // ===== DEBUG PANEL =====
 	const DBG = true;
 
@@ -1002,7 +1009,11 @@
 
 	try{
 		dbg("BOOT: before loadInitialState");
-		await loadInitialState();
+		const r = await withTimeout(loadInitialState(), 1500);
+		if(r === "__timeout__"){
+		dbg("BOOT: loadInitialState TIMEOUT -> continue offline");
+		}
+
 		dbg("BOOT: after loadInitialState", {
 		hasS: !!window.S,
 		dailyGoalsLen: (typeof S !== "undefined" && S?.dailyGoals) ? S.dailyGoals.length : "no S",
@@ -1041,3 +1052,7 @@
 
 </body>
 </html>
+
+
+
+
