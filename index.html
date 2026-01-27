@@ -343,11 +343,17 @@
 	window.onerror = (m, src, line, col, err) => {
 		alert("JS ERROR: " + m + "\n" + src + ":" + line + ":" + col);
 	};
-	window.addEventListener("unhandledrejection", (e) => {
-		if (String(e.reason?.name || "").includes("AbortError") || String(e.reason || "").includes("AbortError")) return;
-		const msg = String(e.reason?.message || e.reason || "");
-		alert("PROMISE ERROR: " + msg);
+	window.addEventListener("unhandledrejection", (e)=>{
+		const r = e.reason;
+		// всегда логируем
+		console.warn("[unhandledrejection]", r);
+
+		// AbortError не алертит (но логируем)
+		if(r && (r.name === "AbortError" || String(r).includes("AbortError"))) return;
+
+		alert("Promise error: " + (r && r.message ? r.message : String(r)));
 	});
+
 
   // 1) ВСТАВЬ СЮДА свои значения из Supabase Project Settings -> API
   const SUPABASE_URL = "https://uivsrhkdlybqyvwkdbwr.supabase.co";
@@ -359,6 +365,36 @@
 
   const $ = (id) => document.getElementById(id);
   function now(){ return Date.now(); }
+
+// ===== DEBUG PANEL =====
+	const DBG = true;
+
+  function dbg(label, data){
+	if(!DBG) return;
+	try{
+		console.log("[DBG]", label, data ?? "");
+		let el = document.getElementById("dbgPanel");
+		if(!el){
+		el = document.createElement("div");
+		el.id = "dbgPanel";
+		el.style.cssText = `
+			position:fixed; left:12px; bottom:12px; z-index:99999;
+			max-width:520px; padding:10px 12px; border-radius:12px;
+			background:rgba(0,0,0,.75); color:#fff; font:12px/1.35 system-ui;
+			border:1px solid rgba(255,255,255,.2); box-shadow: 0 12px 40px rgba(0,0,0,.35);
+			white-space:pre-wrap;
+		`;
+		document.body.appendChild(el);
+		}
+		const txt = typeof data === "string" ? data : JSON.stringify(data, null, 2);
+		el.textContent = `[${new Date().toLocaleTimeString()}] ${label}\n${txt}`;
+	}catch(e){
+		console.warn("dbg failed", e);
+	}
+  }
+
+	// чтобы руками можно было вызывать
+	window.dbg = dbg;
 
   function todayKey(){
     const d = new Date();
@@ -588,6 +624,7 @@
   }
 
   function renderDailyGoals(){
+	dbg("renderDailyGoals", { dailyGoalsLen: S.dailyGoals?.length, dailyGoals: S.dailyGoals });
     const list = $("goalsList");
     if(!S.dailyGoals.length){
       list.innerHTML = `<div class="muted">Нет целей на день. Нажми “➕ Добавить цель”.</div>`;
@@ -628,6 +665,8 @@
         if(ok) removeGoal(id);
       });
     });
+	
+	dbg("renderDailyGoals: end", { goalsListChildren: list?.children?.length, goalsListHTML: list?.innerHTML?.slice(0,120) });
   }
 
   function renderProgress(){
@@ -700,6 +739,7 @@
   }
 
   function renderStreak(){
+	dbg("renderStreak: start", { entriesLen: S.entries?.length, todayChecks: S.todayChecks });
     const doneSet = buildDoneDaysSet();
     const info = computeStreak(doneSet);
     const streak = info.streak;
@@ -716,6 +756,7 @@
     $("streakNum").innerHTML = `${streak} <small>${word(streak)}</small>`;
     $("streakHint").textContent = hasToday ? "Сегодня засчитан ✅" : "Сегодня ещё не засчитан";
     renderCalendar(doneSet);
+	dbg("renderStreak: end", { calendarChildren: $("calendar")?.children?.length });
   }
 
   function saveEntry(){
@@ -739,7 +780,7 @@
 
   function clearAllData(){
     clearLocal();
-    remoteClear();
+    try{ await remoteClear(); }catch(e){ console.warn("remoteClear failed:", e); }
     S = stateDefault();
     saveState(S);
     applyTheme();
@@ -780,64 +821,69 @@
   });
 
   async function loadInitialState(){
-    console.log("--- DEBUG START ---");
     let local = loadLocal();
-    console.log("Local storage data:", local);
-    
-    if(local && expired(local)) {
-        console.log("Local data expired (48h+). Clearing.");
-        local = null;
-    }
+    if(local && expired(local)) local = null;
 
     if(sb){
-        await refreshAuthUI();
-        console.log("Current User:", currentUser);
-        if(currentUser){
-            let remote = null;
-            try{
-                remote = await remoteLoad();
-                console.log("Remote (Supabase) data:", remote);
-            }catch(e){
-                console.warn("remoteLoad failed:", e);
-            }
+      await refreshAuthUI();
+      if(currentUser){
+        let remote = null;
+			try{
+				remote = await remoteLoad();
+			}catch(e){
+				console.warn("remoteLoad failed, continue offline:", e);
+			}
 
-            if (remote) {
-                if (expired(remote)) {
-                    console.log("Remote data expired. Clearing remote.");
-                    await remoteClear();
-                    S = stateDefault();
-                } else {
-                    console.log("Using Remote data.");
-                    S = remote;
-                    // Исправление возможных пустых полей
-                    if (!S.todayChecks || S.todayChecks.date !== todayKey()) S.todayChecks = { date: todayKey(), byId: {} };
-                    if (!S.stake) S.stake = stateDefault().stake;
-                    if (!Array.isArray(S.dailyGoals) || S.dailyGoals.length === 0) S.dailyGoals = stateDefault().dailyGoals;
-                    if (!Array.isArray(S.entries)) S.entries = [];
-                }
-                S.lastOpenAt = now();
-                saveState(S);
-                console.log("Final State (Remote path):", S);
-                return;
-            }
+			if (remote) {
+				if (expired(remote)) {
+					await remoteClear();
+					S = stateDefault();
+					S.lastOpenAt = now();
+					saveState(S);
+				} else {
+					S = remote;
+
+					if (!S.todayChecks || S.todayChecks.date !== todayKey()) {
+					S.todayChecks = { date: todayKey(), byId: {} };
+					}
+					if (!S.todayChecks.byId) S.todayChecks.byId = {};
+
+					if (!S.stake) S.stake = stateDefault().stake;
+					if (!Array.isArray(S.dailyGoals) || S.dailyGoals.length === 0) S.dailyGoals = stateDefault().dailyGoals;
+					if (!Array.isArray(S.entries)) S.entries = [];
+
+					S.lastOpenAt = now();
+					saveState(S);
+				}
+				return;
+			}
+
+
+        if(local){
+          S = local;
+          S.lastOpenAt = now();
+          saveState(S);
+          return;
         }
+
+        S = stateDefault();
+        S.lastOpenAt = now();
+        saveState(S);
+        return;
+      }
     }
 
     if(local){
-        console.log("Using Local data.");
-        S = local;
-    } else {
-        console.log("No data found. Using Default State.");
-        S = stateDefault();
+      S = local;
+    }else{
+      S = stateDefault();
     }
-
+    if (S && expired(S)) S = stateDefault();
     if (!S.todayChecks || S.todayChecks.date !== todayKey()){
-        S.todayChecks = { date: todayKey(), byId: {} };
+      S.todayChecks = { date: todayKey(), byId: {} };
     }
     S.lastOpenAt = now();
     saveState(S);
-    console.log("Final State (Local/Default path):", S);
-    console.log("--- DEBUG END ---");
   }
 
   if(sb){
@@ -952,20 +998,50 @@
   }
 
   (async ()=>{
+	dbg("BOOT: start");
+
 	try{
+		dbg("BOOT: before loadInitialState");
 		await loadInitialState();
-		await refreshAuthUI();
+		dbg("BOOT: after loadInitialState", {
+		hasS: !!window.S,
+		dailyGoalsLen: (typeof S !== "undefined" && S?.dailyGoals) ? S.dailyGoals.length : "no S",
+		entriesLen: (typeof S !== "undefined" && S?.entries) ? S.entries.length : "no S",
+		lastOpenAt: (typeof S !== "undefined" && S?.lastOpenAt) ? S.lastOpenAt : "no S",
+		currentUser: !!currentUser
+		});
 	}catch(e){
-		console.warn("boot failed, render anyway:", e);
+		console.error(e);
+		dbg("BOOT: loadInitialState ERROR", String(e?.message || e));
 	}
-	renderAll();                 // <-- всегда
-	setInterval(renderMeta, 60_000);
+
+	try{
+		applyTheme();
+		dbg("BOOT: applyTheme OK");
+	}catch(e){
+		console.error(e);
+		dbg("BOOT: applyTheme ERROR", String(e?.message || e));
+	}
+
+	try{
+		renderAll();
+		dbg("BOOT: renderAll OK", {
+		goalsListChildren: $("goalsList") ? $("goalsList").children.length : "no #goalsList",
+		calendarChildren: $("calendar") ? $("calendar").children.length : "no #calendar",
+		barText: $("barText") ? $("barText").textContent : "no #barText"
+		});
+	}catch(e){
+		console.error(e);
+		dbg("BOOT: renderAll ERROR", String(e?.message || e));
+	}
   })();
+
 
 </script>
 
 </body>
 </html>
+
 
 
 
