@@ -700,19 +700,15 @@
       : `<div class="muted">Пока записей нет. Нажми “Сохранить запись”.</div>`;
   }
 
-  function buildDoneDaysSet(){
-    // День засчитан, если есть запись и хотя бы 1 done в goalsSnapshot
-    const done = new Set();
-    for(const e of (S.entries ?? [])){
-      // удаление цели на streak не влияет
-      if (e.type === "goal_deleted") continue;
-
-      const day = e.day || ymdFromMs(e.at);
-      const gs = Array.isArray(e.goalsSnapshot) ? e.goalsSnapshot : [];
-      if(gs.some(x => x.done)) done.add(day);
-    }
-    return done;
-  }
+	function buildDoneDaysSet(){
+	// День засчитан, если в этот день была сохранена ЛЮБАЯ запись
+		const done = new Set();
+		for (const e of (S.entries ?? [])) {
+			const day = e.day || ymdFromMs(e.at);
+			done.add(day);
+		}
+		return done;
+	}
 
   function computeStreak(doneSet){
     const today = todayKey();
@@ -875,3 +871,4 @@
 </script>
 </body>
 </html>
+
