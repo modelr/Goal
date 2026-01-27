@@ -52,12 +52,38 @@ export function setModeInfo(ui, mode, user) {
 }
 
 export function renderAll(ui, state) {
+  renderMeta(ui, state);
   renderStake(ui, state);
   renderGoals(ui, state);
   renderProgress(ui, state);
   renderStreak(ui, state);
   renderHistory(ui, state);
 }
+
+export function renderMeta(ui, state) {
+  // "Последний визит"
+  const last = state?.lastOpenAt || state?.lastVisitAt || Date.now();
+  const lastStr = new Date(last).toLocaleString("ru-RU");
+  if (ui.lastVisit) ui.lastVisit.textContent = `Последний визит: ${lastStr}`;
+
+  // "Удаление через ~48ч без открытия"
+  const TTL_HOURS = 48;
+  const ttlMs = TTL_HOURS * 60 * 60 * 1000;
+  const left = (last + ttlMs) - Date.now();
+
+  if (!ui.ttlInfo) return;
+
+  if (left <= 0) {
+    ui.ttlInfo.textContent = `Удаление: срок истёк`;
+    return;
+  }
+
+  const mins = Math.floor(left / 60000);
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  ui.ttlInfo.textContent = `Удаление через ~${h}ч ${m}м без открытия`;
+}
+
 
 export function renderStake(ui, state) {
   ui.stakeInput.value = state.stake.text || "";
