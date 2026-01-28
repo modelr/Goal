@@ -2,7 +2,7 @@ import { APP, SUPABASE } from "./config.js";
 import { defaultState, normalizeState, isExpired, markOpened, nowMs } from "./state.js";
 
 export function clearLocal() {
-  localStorage.removeItem(APP.LOCAL_KEY);
+  try { localStorage.removeItem(APP.LOCAL_KEY); } catch {}
 }
 
 /**
@@ -87,5 +87,6 @@ async function saveRemoteSafe(supabase, userId, state) {
     return false;
   }
 }
+
 
 
