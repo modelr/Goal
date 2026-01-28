@@ -1,80 +1,49 @@
 import { APP, SUPABASE } from "./config.js";
 import { defaultState, normalizeState, isExpired, markOpened, nowMs } from "./state.js";
 
-export function loadLocal() {
-  try {
-    const raw = localStorage.getItem(APP.LOCAL_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
-
-export function saveLocal(state) {
-  localStorage.setItem(APP.LOCAL_KEY, JSON.stringify(state));
-}
-
 export function clearLocal() {
   localStorage.removeItem(APP.LOCAL_KEY);
 }
 
 /**
  * Стратегия "один источник правды":
- * - до логина: источник = localStorage
- * - после логина: источник = Supabase (local остаётся кэшем/фолбэком)
+ * - источник = Supabase
  *
- * Fault tolerance: если Supabase недоступен — работаем локально.
+ * Локальное хранилище не используется для состояния.
  */
 export async function loadInitialState({ supabase }) {
-  // 1) Локально
-  let local = normalizeState(loadLocal());
+  clearLocal();
 
-  // TTL: если долго не открывали — очищаем локальные данные
-  if (local && isExpired(local, APP.TTL_MS)) {
-    local = defaultState();
-  }
-  local = markOpened(local);
-  saveLocal(local);
-
-  // 2) Если нет пользователя — сразу возвращаем local
+  // 1) Если нет пользователя — дефолтное состояние (без локального кэша)
   const user = await getUserSafe(supabase);
   if (!user) {
-    return { state: local, mode: "local", user: null };
+    return { state: markOpened(defaultState()), mode: "offline", user: null };
   }
 
-  // 3) Есть пользователь -> пробуем Supabase
+  // 2) Есть пользователь -> пробуем Supabase
   const remote = await loadRemoteSafe(supabase, user.id);
   if (!remote) {
-    // если в БД пусто — зальём локальное как первичное
-    await saveRemoteSafe(supabase, user.id, local);
-    return { state: local, mode: "remote", user };
+    // если в БД пусто — создаём дефолт и сохраняем
+    const fresh = markOpened(defaultState());
+    await saveRemoteSafe(supabase, user.id, fresh);
+    return { state: fresh, mode: "remote", user };
   }
 
-  // 4) Конфликт: выбираем "новее" по updatedAt (если нет — по lastOpenAt)
   const r = normalizeState(remote.state);
-  const remoteTs = remote.updated_at ? new Date(remote.updated_at).getTime() : (r.lastOpenAt || 0);
-  const localTs = local.lastOpenAt || 0;
+  if (isExpired(r, APP.TTL_MS)) {
+    const fresh = markOpened(defaultState());
+    await saveRemoteSafe(supabase, user.id, fresh);
+    return { state: fresh, mode: "remote", user };
+  }
 
-  const winner = (localTs > remoteTs) ? local : r;
-  // если победил local — синхронизируем наверх
-  if (winner === local) await saveRemoteSafe(supabase, user.id, local);
-
-  // кэшируем победителя локально
-  saveLocal(winner);
-
-  return { state: winner, mode: "remote", user };
+  return { state: markOpened(r), mode: "remote", user };
 }
 
 export async function saveState({ supabase, userId, state }) {
-  // всегда сохраняем локально (чтобы не терять данные при сбое сети)
-  saveLocal(state);
+  if (!userId) return { ok: false, mode: "offline", reason: "no-user" };
 
-  if (!userId) return { ok: true, mode: "local" };
-
-  // и пытаемся сохранить в облако
   const ok = await saveRemoteSafe(supabase, userId, state);
-  return { ok, mode: ok ? "remote" : "local" };
+  return { ok, mode: ok ? "remote" : "offline" };
 }
 
 async function getUserSafe(supabase) {
@@ -118,4 +87,5 @@ async function saveRemoteSafe(supabase, userId, state) {
     return false;
   }
 }
+
 
