@@ -149,11 +149,15 @@ export function renderGoals(ui, state) {
     del.dataset.goalId = g.id;
     del.dataset.role = "goalDelete";
 
+    const controls = document.createElement("div");
+    controls.className = "goalControls";
+    controls.appendChild(chk);
+    controls.appendChild(del);
+
     const row = document.createElement("div");
-    row.className = "row";
+    row.className = "goalTop";
     row.appendChild(label);
-    row.appendChild(chk);
-    row.appendChild(del);
+    row.appendChild(controls);
 
     wrap.appendChild(row);
     wrap.appendChild(input);
@@ -237,6 +241,7 @@ export function renderHistory(ui, state) {
     ui.history.appendChild(card);
   }
 }
+
 
 
 
