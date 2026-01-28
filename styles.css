@@ -97,7 +97,7 @@ h1{
   display:grid;
   grid-template-columns: 1.15fr .85fr;
   gap: 14px;
-  align-items: stretch;
+  align-items: start;
 }
 .grid > .card{
   min-height: 0;
@@ -502,6 +502,7 @@ textarea{
 }
 .modalRow{ display: grid; gap: 10px; }
 button.pill.btn { cursor: pointer; }
+
 
 
 
