@@ -50,8 +50,42 @@ export function toast(ui, msg, ms = 2000) {
   setTimeout(() => (ui.toast.hidden = true), ms);
 }
 
-export function setOnlineBadge(ui, online) {
-  ui.netBadge.textContent = online ? "Онлайн" : "Офлайн";
+const CLOUD_ICON = `
+  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="M7.5 18a4.5 4.5 0 0 1-.3-9 5.6 5.6 0 0 1 10.6 1.8 3.6 3.6 0 0 1 .2 7.2H7.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+`;
+const CLOUD_CHECK_ICON = `
+  <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="M7.5 18a4.5 4.5 0 0 1-.3-9 5.6 5.6 0 0 1 10.6 1.8 3.6 3.6 0 0 1 .2 7.2H7.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="m9.4 12.7 2.2 2.2 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+`;
+
+export function setOnlineBadge(ui, { isOnline, user, hasPendingSync }) {
+  if (!ui.netBadge) return;
+
+  const badge = ui.netBadge;
+  if (!isOnline || !user) {
+    badge.dataset.status = "offline";
+    badge.textContent = "Оффлайн";
+    badge.setAttribute("aria-label", "Оффлайн режим");
+    badge.title = "Оффлайн режим";
+    return;
+  }
+
+  if (hasPendingSync) {
+    badge.dataset.status = "pending";
+    badge.innerHTML = `<span class="netBadgeIcon">${CLOUD_ICON}</span><span class="netBadgeText">Не сохранено</span>`;
+    badge.setAttribute("aria-label", "Есть несохранённые изменения");
+    badge.title = "Есть несохранённые изменения";
+    return;
+  }
+
+  badge.dataset.status = "synced";
+  badge.innerHTML = `<span class="netBadgeIcon">${CLOUD_CHECK_ICON}</span><span class="netBadgeText">Сохранено</span>`;
+  badge.setAttribute("aria-label", "Все изменения сохранены");
+  badge.title = "Все изменения сохранены";
 }
 
 export function setModeInfo(ui, mode, user) {
@@ -242,6 +276,7 @@ export function renderHistory(ui, state) {
     ui.history.appendChild(card);
   }
 }
+
 
 
 
