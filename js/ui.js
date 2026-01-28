@@ -62,6 +62,7 @@ export function renderAll(ui, state) {
   renderMeta(ui, state);
   renderStake(ui, state);
   renderGoals(ui, state);
+  renderTodayNote(ui, state);
   renderProgress(ui, state);
   renderStreak(ui, state);
   renderHistory(ui, state);
@@ -215,3 +216,4 @@ export function renderHistory(ui, state) {
     ui.history.appendChild(card);
   }
 }
+
