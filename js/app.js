@@ -14,6 +14,7 @@ let user = null;
 let mode = "local";
 let saving = false;
 let hasPendingSync = false;
+let offlineModalShown = false;
 const THEME_KEY = "goal-theme";
 
 boot().catch(err => hardFail(err));
@@ -48,6 +49,7 @@ async function boot() {
       state = normalizeState(init2.state);
       mode = init2.mode;
       hasPendingSync = false;
+      offlineModalShown = false;
       setModeInfo(ui, mode, user);
       updateNetBadge();
       renderAll(ui, state);
@@ -195,6 +197,13 @@ function wireEvents() {
     });
   }
 
+  if (ui.offlineOkBtn && ui.offlineModal) {
+    ui.offlineOkBtn.addEventListener("click", () => {
+      ui.offlineModal.classList.remove("show");
+      ui.offlineModal.hidden = true;
+    });
+  }
+
   // auth modal: send magic link
   if (ui.sendLinkBtn && ui.authEmail) {
     ui.sendLinkBtn.addEventListener("click", async () => {
@@ -236,7 +245,14 @@ function wireEvents() {
   });
 }
 
-
+  if (ui.offlineModal) {
+    ui.offlineModal.addEventListener("click", (e) => {
+      if (e.target === ui.offlineModal) {
+        ui.offlineModal.classList.remove("show");
+        ui.offlineModal.hidden = true;
+      }
+    });
+  }
  ui.btnTheme.addEventListener("click", () => {
     const nextTheme = document.documentElement.getAttribute("data-theme") === "light"
       ? "dark"
@@ -270,6 +286,10 @@ async function persist() {
   mode = res.mode === "remote" ? "remote" : mode; // не откатываем UI лишний раз
   setModeInfo(ui, user ? "remote" : "local", user);
   if (res.ok && user) hasPendingSync = false;
+  if (!res.ok && user) {
+    hasPendingSync = true;
+    showOfflineNotice("Мы оффлайн, данные не сохранятся.");
+  }
   updateNetBadge();
   saving = false;
   return res;
@@ -317,6 +337,14 @@ function updateNetBadge() {
   });
 }
 
+function showOfflineNotice(message) {
+  if (!ui.offlineModal || offlineModalShown) return;
+  if (ui.offlineMessage) ui.offlineMessage.textContent = message;
+  ui.offlineModal.hidden = false;
+  ui.offlineModal.classList.add("show");
+  offlineModalShown = true;
+}
+
 function hardFail(err) {
   console.error(err);
   alert("BOOT FAIL: " + (err?.message || String(err)));
@@ -337,7 +365,3 @@ function loadTheme() {
 function saveTheme(theme) {
   localStorage.setItem(THEME_KEY, theme);
 }
-
-
-
-
