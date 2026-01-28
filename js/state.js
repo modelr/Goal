@@ -6,7 +6,7 @@ export function defaultState() {
   return {
     v: APP.VERSION,
     lastOpenAt: nowMs(),
-    stake: { text: "", done: false, createdAt: null, doneAt: null },
+    stake: { text: "", done: false, createdAt: nowMs(), doneAt: null },
     dailyGoals: [{ id: uid(), text: "", doneToday: false }],
     todayNote: "",
     // история: массив записей
@@ -21,6 +21,7 @@ export function normalizeState(s) {
 
   // stake
   out.stake = { ...base.stake, ...(out.stake || {}) };
+  if (!out.stake.createdAt) out.stake.createdAt = nowMs();
 
   // dailyGoals: по дефолту одна
   if (!Array.isArray(out.dailyGoals) || out.dailyGoals.length === 0) {
@@ -124,3 +125,4 @@ export function computeStreak(history) {
   }
   return { streak, todayCounted: map.has(dayKey(Date.now())) };
 }
+
