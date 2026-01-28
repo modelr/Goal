@@ -40,6 +40,9 @@ export function bindUI() {
     sendLinkBtn: el("sendLinkBtn"),
     closeAuthBtn: el("closeAuthBtn"),
     authStatus: el("authStatus"),
+    offlineModal: el("offlineModal"),
+    offlineMessage: el("offlineMessage"),
+    offlineOkBtn: el("offlineOkBtn"),
 
   };
 }
@@ -89,8 +92,11 @@ export function setOnlineBadge(ui, { isOnline, user, hasPendingSync }) {
 }
 
 export function setModeInfo(ui, mode, user) {
-  if (mode === "remote" && user) ui.modeInfo.textContent = `Облачный режим (Supabase). Пользователь: ${user.email || user.id}`;
-  else ui.modeInfo.textContent = "Офлайн режим (локально).";
+  if (user) {
+    ui.modeInfo.textContent = `Облачный режим (Supabase). Пользователь: ${user.email || user.id}`;
+    return;
+  }
+  ui.modeInfo.textContent = "Войдите, чтобы данные сохранялись в облаке.";
 }
 
 export function renderAll(ui, state) {
@@ -276,6 +282,7 @@ export function renderHistory(ui, state) {
     ui.history.appendChild(card);
   }
 }
+
 
 
 
