@@ -5,7 +5,7 @@
   --bg: #0b1220;
   --card: rgba(255,255,255,.06);
   --text: rgba(255,255,255,.92);
-  --muted: rgba(255,255,255,.65);
+  --muted: rgba(255,255,255,.78);
   --line: rgba(255,255,255,.10);
   --accent: #7c3aed;
   --accent2:#22c55e;
@@ -80,6 +80,7 @@ h1{
   color: var(--muted);
   font-size: 13px;
   margin-top: 2px;
+  font-weight: 500;
 }
 
 .top-actions,
@@ -118,7 +119,7 @@ h2{
   font-size: 16px;
 }
 
-.muted{ color: var(--muted); font-size: 13px; }
+.muted{ color: var(--muted); font-size: 13px; font-weight: 500; }
 .small{ font-size: 12px; color: var(--muted); }
 
 /* separators */
@@ -483,6 +484,7 @@ textarea{
 }
 .modalRow{ display: grid; gap: 10px; }
 button.pill.btn { cursor: pointer; }
+
 
 
 
