@@ -44,8 +44,15 @@ export function uid() {
   return Math.random().toString(16).slice(2) + "-" + Date.now().toString(16);
 }
 
-export function isExpired(lastOpenAt, ttlMs) {
-  return nowMs() - (lastOpenAt || 0) > ttlMs;
+export function lastActionAt(s) {
+  const history = Array.isArray(s?.history) ? s.history : [];
+  if (history.length === 0) return s?.lastOpenAt || nowMs();
+  const lastHistoryTs = history.reduce((max, entry) => Math.max(max, entry?.ts || 0), 0);
+  return lastHistoryTs || s?.lastOpenAt || nowMs();
+}
+
+export function isExpired(state, ttlMs) {
+  return nowMs() - lastActionAt(state) > ttlMs;
 }
 
 export function markOpened(s) {
@@ -125,4 +132,5 @@ export function computeStreak(history) {
   }
   return { streak, todayCounted: map.has(dayKey(Date.now())) };
 }
+
 
