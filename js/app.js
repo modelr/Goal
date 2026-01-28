@@ -4,7 +4,7 @@ import {
   addHistorySave, markOpened
 } from "./state.js";
 import { loadInitialState, saveState, clearLocal } from "./storage.js";
-import { bindUI, renderAll, toast, setOnlineBadge, setModeInfo } from "./ui.js";
+import { bindUI, renderAll, syncHistoryHeight, toast, setOnlineBadge, setModeInfo } from "./ui.js";
 import { APP } from "./config.js";
 
 const ui = bindUI();
@@ -37,6 +37,7 @@ async function boot() {
   setModeInfo(ui, mode, user);
   updateNetBadge();
   renderAll(ui, state);
+  window.addEventListener("resize", () => syncHistoryHeight(ui));
 
   wireEvents();
 
@@ -365,3 +366,4 @@ function loadTheme() {
 function saveTheme(theme) {
   localStorage.setItem(THEME_KEY, theme);
 }
+
