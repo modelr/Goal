@@ -321,7 +321,11 @@ export function renderHistory(ui, state) {
     body.className = "histBody";
 
     if (e.type === "delete_goal") {
-      body.textContent = `Событие: удалена цель\n${e.payload?.text || ""}`.trim();
+      const text = e.payload?.text || "";
+      body.textContent = `Удалена цель: «${text}»`.trim();
+    } else if (e.type === "done_goal") {
+      const text = e.payload?.text || "";
+      body.textContent = `Сделана цель: «${text}»`.trim();
     } else if (e.type === "save") {
       const p = e.payload || {};
       body.textContent =
@@ -337,17 +341,3 @@ export function renderHistory(ui, state) {
     ui.history.appendChild(card);
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
