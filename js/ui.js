@@ -98,8 +98,8 @@ export function renderStake(ui, state) {
   ui.stakeStatus.textContent = state.stake.done ? "Статус: Готово ✅" : "Статус: В процессе";
 }
 
-export function renderGoals(ui, state) {
-  ui.goalsList.innerHTML = "";
+export function renderGoals(ui, state) {␊
+  ui.goalsList.innerHTML = "";␊
 
   state.dailyGoals.forEach((g, idx) => {
     const wrap = document.createElement("div");
@@ -144,6 +144,11 @@ export function renderGoals(ui, state) {
 
     ui.goalsList.appendChild(wrap);
   });
+}
+
+export function renderTodayNote(ui, state) {
+  if (!ui.todayNote) return;
+  ui.todayNote.value = state.todayNote || "";
 }
 
 export function renderProgress(ui, state) {
@@ -216,4 +221,5 @@ export function renderHistory(ui, state) {
     ui.history.appendChild(card);
   }
 }
+
 
