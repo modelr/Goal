@@ -131,10 +131,13 @@ export function startHistorySizer(ui) {
 export function syncHistoryHeight(ui) {
   if (!ui?.mainCard || !ui?.historyCard) return;
 
-
   if (window.matchMedia("(max-width: 920px)").matches) {
     ui.historyCard.style.height = "";
     ui.historyCard.style.maxHeight = "";
+    if (ui.history) {
+      ui.history.style.maxHeight = "";
+      ui.history.style.height = "";
+    }
     return;
   }
 
@@ -143,7 +146,18 @@ export function syncHistoryHeight(ui) {
 
   ui.historyCard.style.height = `${mainHeight}px`;
   ui.historyCard.style.maxHeight = `${mainHeight}px`;
+
+  if (ui.history) {
+    const cardStyles = window.getComputedStyle(ui.historyCard);
+    const paddingBottom = parseFloat(cardStyles.paddingBottom) || 0;
+    const cardTop = ui.historyCard.getBoundingClientRect().top;
+    const historyTop = ui.history.getBoundingClientRect().top;
+    const available = Math.max(0, mainHeight - (historyTop - cardTop) - paddingBottom);
+    ui.history.style.maxHeight = `${available}px`;
+    ui.history.style.height = `${available}px`;
+  }
 }
+
 
 export function renderMeta(ui, state) {
   // "Последний визит"
@@ -318,6 +332,7 @@ export function renderHistory(ui, state) {
     ui.history.appendChild(card);
   }
 }
+
 
 
 
