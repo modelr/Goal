@@ -132,6 +132,15 @@ h2{
   margin-top:10px;
   flex-wrap:wrap; /* чтобы на узких экранах переносилось */
 }
+.row.actionsSplit{
+  justify-content:space-between;
+  gap:14px;
+  flex-wrap:nowrap;
+}
+.row.actionsSplit .btn{
+  flex: 1 1 0;
+  justify-content:center;
+}
 .goalsActions{
   justify-content:flex-start;
   gap:12px;
@@ -251,9 +260,10 @@ textarea{
 /* Two-column buttons */
 .two{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
-@media (max-width: 520px){
-  .row{ align-items:stretch; }
-  .row > .btn{ width:100%; justify-content:center; }
+@media ( max-width : 520px ){
+  .row { align-items :stretch; }
+  .row > .btn { width : 100% ; justify-content :center; }
+  .row .actionsSplit { flex-wrap :wrap; }
 }
 
 /* Goals list + items */
@@ -457,6 +467,7 @@ textarea{
 }
 .modalRow{ display: grid; gap: 10px; }
 button.pill.btn { cursor: pointer; }
+
 
 
 
