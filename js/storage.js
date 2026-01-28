@@ -31,7 +31,7 @@ export async function loadInitialState({ supabase }) {
   let local = normalizeState(loadLocal());
 
   // TTL: если долго не открывали — очищаем локальные данные
-  if (local && isExpired(local.lastOpenAt, APP.TTL_MS)) {
+  if (local && isExpired(local, APP.TTL_MS)) {
     local = defaultState();
   }
   local = markOpened(local);
@@ -118,3 +118,4 @@ async function saveRemoteSafe(supabase, userId, state) {
     return false;
   }
 }
+
