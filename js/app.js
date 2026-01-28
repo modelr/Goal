@@ -361,11 +361,10 @@ function applyTheme(theme) {
 }
 
 function loadTheme() {
-  return localStorage.getItem(THEME_KEY) || "dark";
+  try { return localStorage.getItem(THEME_KEY) || "dark"; }
+  catch { return "dark"; }
 }
 
 function saveTheme(theme) {
-  localStorage.setItem(THEME_KEY, theme);
+  try { localStorage.setItem(THEME_KEY, theme); } catch {}
 }
-
-
