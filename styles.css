@@ -132,6 +132,16 @@ h2{
   margin-top:10px;
   flex-wrap:wrap; /* чтобы на узких экранах переносилось */
 }
+.goalsActions{
+  justify-content:flex-start;
+  gap:12px;
+}
+.goalsMeta{
+  margin-top: 8px;
+}
+.goalsProgressLabel{
+  margin-top: 10px;
+}
 
 /* Inputs */
 .input,
@@ -257,8 +267,19 @@ textarea{
   display:grid;
   gap: 8px;
 }
-.goalTop{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
-.goalControls{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.goalTop{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+}
+.goalControls{
+  display:flex;
+  gap:12px;
+  align-items:center;
+  flex-wrap:wrap;
+}
 
 .inlineCheck{
   display:flex; align-items:center; gap:8px;
@@ -436,6 +457,7 @@ textarea{
 }
 .modalRow{ display: grid; gap: 10px; }
 button.pill.btn { cursor: pointer; }
+
 
 
 
