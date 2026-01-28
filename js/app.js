@@ -14,11 +14,13 @@ let user = null;
 let mode = "local";
 let saving = false;
 let hasPendingSync = false;
+const THEME_KEY = "goal-theme";
 
 boot().catch(err => hardFail(err));
 
 async function boot() {
   installGuards();
+  applyTheme(loadTheme());
 
   updateNetBadge();
   window.addEventListener("online", () => updateNetBadge());
@@ -235,8 +237,12 @@ function wireEvents() {
 }
 
 
-  ui.btnTheme.addEventListener("click", () => {
-    document.documentElement.classList.toggle("light");
+ ui.btnTheme.addEventListener("click", () => {
+    const nextTheme = document.documentElement.getAttribute("data-theme") === "light"
+      ? "dark"
+      : "light";
+    saveTheme(nextTheme);
+    applyTheme(nextTheme);
   });
 }
 
@@ -315,6 +321,23 @@ function hardFail(err) {
   console.error(err);
   alert("BOOT FAIL: " + (err?.message || String(err)));
 }
+
+function applyTheme(theme) {
+  if (theme === "light") {
+    document.documentElement.setAttribute("data-theme", "light");
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+  }
+}
+
+function loadTheme() {
+  return localStorage.getItem(THEME_KEY) || "dark";
+}
+
+function saveTheme(theme) {
+  localStorage.setItem(THEME_KEY, theme);
+}
+
 
 
 
