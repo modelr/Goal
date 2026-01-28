@@ -146,7 +146,7 @@ export function renderGoals(ui, state) {
 
     const del = document.createElement("button");
     del.className = "btn red";
-    del.textContent = "🗑";
+    del.textContent = "🗑️";
     del.dataset.goalId = g.id;
     del.dataset.role = "goalDelete";
 
@@ -242,6 +242,7 @@ export function renderHistory(ui, state) {
     ui.history.appendChild(card);
   }
 }
+
 
 
 
