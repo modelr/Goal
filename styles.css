@@ -97,6 +97,7 @@ h1{
   display:grid;
   grid-template-columns: 1.15fr .85fr;
   gap: 14px;
+  align-items: stretch;
 }
 @media (max-width: 920px){
   .grid{ grid-template-columns: 1fr; }
@@ -396,9 +397,17 @@ textarea{
   display:grid;
   gap: 10px;
   margin-top: 10px;
-  max-height: 360px;
+  max-height: none;
   overflow:auto;
   padding-right: 4px;
+}
+.historyCard{
+  display:flex;
+  flex-direction:column;
+}
+.historyCard .history{
+  flex: 1 1 auto;
+  min-height: 0;
 }
 .entry,
 .histCard{
@@ -484,6 +493,7 @@ textarea{
 }
 .modalRow{ display: grid; gap: 10px; }
 button.pill.btn { cursor: pointer; }
+
 
 
 
