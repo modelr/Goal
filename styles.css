@@ -400,10 +400,14 @@ textarea{
   max-height: none;
   overflow:auto;
   padding-right: 4px;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 .historyCard{
   display:flex;
   flex-direction:column;
+  height: 100%;
+  min-height: 0;
 }
 .historyCard .history{
   flex: 1 1 auto;
@@ -493,6 +497,7 @@ textarea{
 }
 .modalRow{ display: grid; gap: 10px; }
 button.pill.btn { cursor: pointer; }
+
 
 
 
