@@ -109,12 +109,14 @@ export function renderAll(ui, state) {
   renderProgress(ui, state);
   renderStreak(ui, state);
   renderHistory(ui, state);
-  syncHistoryHeight(ui);
+  requestAnimationFrame(() => syncHistoryHeight(ui));
 }
 
 export function startHistorySizer(ui) {
   if (!ui?.mainCard || !ui?.historyCard) return;
   if (ui.historySizer) return;
+
+  window.addEventListener("load", () => syncHistoryHeight(ui), { once: true });
 
   if (typeof ResizeObserver === "undefined") {
     window.addEventListener("load", () => syncHistoryHeight(ui));
@@ -335,6 +337,7 @@ export function renderHistory(ui, state) {
     ui.history.appendChild(card);
   }
 }
+
 
 
 
