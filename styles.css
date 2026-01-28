@@ -260,10 +260,10 @@ textarea{
 /* Two-column buttons */
 .two{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
-@media ( max-width : 520px ){
-  .row { align-items :stretch; }
-  .row > .btn { width : 100% ; justify-content :center; }
-  .row .actionsSplit { flex-wrap :wrap; }
+@media (max-width: 520px){
+  .row{ align-items:stretch; }
+  .row > .btn{ width:100%; justify-content:center; }
+  .row.actionsSplit{ flex-wrap:wrap; }
 }
 
 /* Goals list + items */
@@ -467,6 +467,7 @@ textarea{
 }
 .modalRow{ display: grid; gap: 10px; }
 button.pill.btn { cursor: pointer; }
+
 
 
 
