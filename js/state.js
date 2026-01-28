@@ -67,11 +67,12 @@ export function addGoal(s) {
 export function deleteGoal(s, goalId) {
   const g = s.dailyGoals.find(x => x.id === goalId);
   const goals = s.dailyGoals.filter(x => x.id !== goalId);
+  const wasDoneToday = !!g?.doneToday;
 
   // Важное: удаление уходит в историю
   const history = [{
     ts: nowMs(),
-    type: "delete_goal",
+    type: wasDoneToday ? "done_goal" : "delete_goal",
     payload: { text: g?.text || "", goalId }
   }, ...s.history];
 
@@ -132,5 +133,6 @@ export function computeStreak(history) {
   }
   return { streak, todayCounted: map.has(dayKey(Date.now())) };
 }
+
 
 
