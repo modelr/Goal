@@ -239,6 +239,22 @@ textarea{
 }
 .mutedPill{ color: var(--muted); }
 
+#netBadge{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+
+#netBadge .netBadgeIcon{
+  display:inline-flex;
+  align-items:center;
+}
+
+#netBadge svg{
+  width:14px;
+  height:14px;
+}
+
 /* Progress bar */
 .progress,
 .bar{
@@ -467,6 +483,7 @@ textarea{
 }
 .modalRow{ display: grid; gap: 10px; }
 button.pill.btn { cursor: pointer; }
+
 
 
 
