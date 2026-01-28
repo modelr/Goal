@@ -34,7 +34,7 @@
         <h2>Долгосрочная цель “Ставка”</h2>
         <p class="muted">Это цель на месяц/квартал. Ставишь одну. Когда достигнута — жмёшь “Готово”.</p>
 
-        <input id="stakeInput" class="input" placeholder="Например: сделать стабильный поток заказов" />
+        <input id="stakeInput" class="input" placeholder="Например: Сделать IronMan 226" />
 
         <div class="row">
           <button id="stakeDoneBtn" class="btn green">✅ Готово</button>
@@ -47,13 +47,16 @@
         <h2>Цели на день</h2>
         <p class="muted">Добавляй дневные цели кнопкой “+”. Отмечай выполненные за сегодня. Ctrl+Enter сохраняет запись.</p>
 
-        <div class="row">
+      	<div class="row goalsActions">
           <button id="btnAddGoal" class="btn purple">➕ Добавить цель</button>
-		  <span class="pill" id="ttlInfo">—</span>
-		  <span class="pill" id="lastVisit">—</span>
+          <span class="pill" id="ttlInfo">—</span>
         </div>
-        
-        <div class="muted small">Прогресс за сегодня</div>
+
+        <div class="row goalsMeta">
+          <span class="pill" id="lastVisit">—</span>
+        </div>
+
+        <div class="muted small goalsProgressLabel">Прогресс за сегодня</div>
         <div class="progress"><div id="progressBar" class="bar"></div></div>
         <div class="muted small" id="progressText">0/0</div>
 
@@ -121,4 +124,5 @@
   <script type="module" src="./js/app.js"></script>
 </body>
 </html>
+
 
