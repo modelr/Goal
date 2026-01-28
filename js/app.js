@@ -59,6 +59,7 @@ function wireEvents() {
   // stake
   ui.stakeInput.addEventListener("input", () => {
     state.stake.text = ui.stakeInput.value;
+    if (!state.stake.createdAt) state.stake.createdAt = Date.now();
     state = markOpened(state);
     renderAll(ui, state);
     scheduleSave();
@@ -67,7 +68,7 @@ function wireEvents() {
   ui.stakeDoneBtn.addEventListener("click", () => {
     state.stake.done = !state.stake.done;
     if (!state.stake.createdAt) state.stake.createdAt = Date.now();
-    if (state.stake.done) state.stake.doneAt = Date.now();
+    state.stake.doneAt = state.stake.done ? Date.now() : null;
     state = markOpened(state);
     renderAll(ui, state);
     scheduleSave();
@@ -290,4 +291,5 @@ function hardFail(err) {
   console.error(err);
   alert("BOOT FAIL: " + (err?.message || String(err)));
 }
+
 
