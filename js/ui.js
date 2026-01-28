@@ -141,8 +141,11 @@ export function syncHistoryHeight(ui) {
     return;
   }
 
-  const mainHeight = ui.mainCard.getBoundingClientRect().height;
-  if (!mainHeight) return;
+  const mainHeight = ui.mainCard.offsetHeight || ui.mainCard.getBoundingClientRect().height;
+  if (!mainHeight) {
+    requestAnimationFrame(() => syncHistoryHeight(ui));
+    return;
+  }
 
   ui.historyCard.style.height = `${mainHeight}px`;
   ui.historyCard.style.maxHeight = `${mainHeight}px`;
@@ -332,6 +335,7 @@ export function renderHistory(ui, state) {
     ui.history.appendChild(card);
   }
 }
+
 
 
 
