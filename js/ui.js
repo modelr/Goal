@@ -112,8 +112,25 @@ export function renderAll(ui, state) {
   syncHistoryHeight(ui);
 }
 
+export function startHistorySizer(ui) {
+  if (!ui?.mainCard || !ui?.historyCard) return;
+  if (ui.historySizer) return;
+
+  if (typeof ResizeObserver === "undefined") {
+    window.addEventListener("load", () => syncHistoryHeight(ui));
+    syncHistoryHeight(ui);
+    return;
+  }
+
+  const observer = new ResizeObserver(() => syncHistoryHeight(ui));
+  observer.observe(ui.mainCard);
+  ui.historySizer = observer;
+  syncHistoryHeight(ui);
+}
+
 export function syncHistoryHeight(ui) {
   if (!ui?.mainCard || !ui?.historyCard) return;
+
 
   if (window.matchMedia("(max-width: 920px)").matches) {
     ui.historyCard.style.height = "";
@@ -301,6 +318,7 @@ export function renderHistory(ui, state) {
     ui.history.appendChild(card);
   }
 }
+
 
 
 
