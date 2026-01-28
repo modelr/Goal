@@ -13,7 +13,8 @@ export function bindUI() {
     stakeInput: el("stakeInput"),
     stakeDoneBtn: el("stakeDoneBtn"),
     stakeStatus: el("stakeStatus"),
-
+    stakeMeta: el("stakeMeta"),
+	  
     btnAddGoal: el("btnAddGoal"),
     ttlInfo: el("ttlInfo"),
     lastVisit: el("lastVisit"),
@@ -94,8 +95,23 @@ export function renderMeta(ui, state) {
 
 
 export function renderStake(ui, state) {
+  const done = !!state.stake.done;
   ui.stakeInput.value = state.stake.text || "";
-  ui.stakeStatus.textContent = state.stake.done ? "Статус: Готово ✅" : "Статус: В процессе";
+  ui.stakeInput.classList.toggle("strike", done);
+  ui.stakeStatus.textContent = done ? "Статус: Готово ✅" : "Статус: В процессе";
+
+  if (ui.stakeDoneBtn) {
+    ui.stakeDoneBtn.textContent = done ? "↩️ Вернуть в работу" : "✅ Готово";
+    ui.stakeDoneBtn.classList.toggle("ghost", done);
+  }
+
+  if (ui.stakeMeta) {
+    const created = state.stake.createdAt ? new Date(state.stake.createdAt).toLocaleDateString("ru-RU") : "—";
+    const doneAt = state.stake.doneAt ? new Date(state.stake.doneAt).toLocaleString("ru-RU") : "—";
+    ui.stakeMeta.textContent = done
+      ? `Создано: ${created} • Завершено: ${doneAt}`
+      : `Создано: ${created}`;
+  }
 }
 
 export function renderGoals(ui, state) {
@@ -221,6 +237,7 @@ export function renderHistory(ui, state) {
     ui.history.appendChild(card);
   }
 }
+
 
 
 
