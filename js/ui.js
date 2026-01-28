@@ -1,4 +1,4 @@
-import { computeProgress, computeStreak, dayKey } from "./state.js";
+import { computeProgress, computeStreak, dayKey, lastActionAt } from "./state.js";
 
 export function bindUI() {
   const el = (id) => document.getElementById(id);
@@ -75,10 +75,11 @@ export function renderMeta(ui, state) {
   const lastStr = new Date(last).toLocaleString("ru-RU");
   if (ui.lastVisit) ui.lastVisit.textContent = `Последний визит: ${lastStr}`;
 
-  // "Удаление через ~48ч без открытия"
-  const TTL_HOURS = 48;
+  // "Удаление через 36ч без действий"
+  const TTL_HOURS = 36;
   const ttlMs = TTL_HOURS * 60 * 60 * 1000;
-  const left = (last + ttlMs) - Date.now();
+  const lastAction = lastActionAt(state);
+  const left = (lastAction + ttlMs) - Date.now();
 
   if (!ui.ttlInfo) return;
 
@@ -90,7 +91,7 @@ export function renderMeta(ui, state) {
   const mins = Math.floor(left / 60000);
   const h = Math.floor(mins / 60);
   const m = mins % 60;
-  ui.ttlInfo.textContent = `Удаление через ~${h}ч ${m}м без открытия`;
+  ui.ttlInfo.textContent = `Удаление через ${h}ч ${m}м без действий`;
 }
 
 
@@ -241,6 +242,7 @@ export function renderHistory(ui, state) {
     ui.history.appendChild(card);
   }
 }
+
 
 
 
