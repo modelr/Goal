@@ -13,24 +13,26 @@ let state = null;
 let user = null;
 let mode = "local";
 let saving = false;
+let hasPendingSync = false;
 
 boot().catch(err => hardFail(err));
 
 async function boot() {
   installGuards();
 
-  setOnlineBadge(ui, navigator.onLine);
-  window.addEventListener("online", () => setOnlineBadge(ui, true));
-  window.addEventListener("offline", () => setOnlineBadge(ui, false));
-
+  updateNetBadge();
+  window.addEventListener("online", () => updateNetBadge());
+  window.addEventListener("offline", () => updateNetBadge());
   // 1) загрузка состояния (local -> (если залогинен) supabase)
   const init = await loadInitialState({ supabase });
   state = normalizeState(init.state);
   user = init.user;
   if (ui.btnLogin) ui.btnLogin.textContent = user ? "🚪 Выйти" : "🔐 Войти";
   mode = init.mode;
+  hasPendingSync = false;
 
   setModeInfo(ui, mode, user);
+  updateNetBadge();
   renderAll(ui, state);
 
   wireEvents();
@@ -43,7 +45,9 @@ async function boot() {
       const init2 = await loadInitialState({ supabase });
       state = normalizeState(init2.state);
       mode = init2.mode;
+      hasPendingSync = false;
       setModeInfo(ui, mode, user);
+      updateNetBadge();
       renderAll(ui, state);
       toast(ui, user ? "Вошли, данные синхронизированы" : "Вышли, офлайн-режим");
     });
@@ -130,6 +134,7 @@ function wireEvents() {
     clearLocal();
     state = defaultState();
     renderAll(ui, state);
+    markPendingSync();
     await persist();
     toast(ui, "Очищено");
   });
@@ -150,6 +155,7 @@ function wireEvents() {
     const text = await f.text();
     state = normalizeState(JSON.parse(text));
     renderAll(ui, state);
+    markPendingSync();
     await persist();
     toast(ui, "Импортировано и сохранено");
     e.target.value = "";
@@ -240,12 +246,14 @@ function doSaveEntry() {
   state.todayNote = "";
   state = markOpened(state);
   renderAll(ui, state);
+  markPendingSync();
   persist().then(() => toast(ui, "Сохранено"));
 }
 
 let saveTimer = null;
 function scheduleSave() {
   if (saveTimer) clearTimeout(saveTimer);
+  markPendingSync();
   saveTimer = setTimeout(() => persist(), 350);
 }
 
@@ -255,6 +263,8 @@ async function persist() {
   const res = await saveState({ supabase, userId: user?.id || null, state });
   mode = res.mode === "remote" ? "remote" : mode; // не откатываем UI лишний раз
   setModeInfo(ui, user ? "remote" : "local", user);
+  if (res.ok && user) hasPendingSync = false;
+  updateNetBadge();
   saving = false;
   return res;
 }
@@ -287,9 +297,24 @@ function debug(msg, obj) {
   setTimeout(() => (ui.toast.hidden = true), 2500);
 }
 
+function markPendingSync() {
+  if (!user) return;
+  hasPendingSync = true;
+  updateNetBadge();
+}
+
+function updateNetBadge() {
+  setOnlineBadge(ui, {
+    isOnline: navigator.onLine,
+    user,
+    hasPendingSync
+  });
+}
+
 function hardFail(err) {
   console.error(err);
   alert("BOOT FAIL: " + (err?.message || String(err)));
 }
+
 
 
