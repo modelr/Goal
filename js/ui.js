@@ -4,6 +4,8 @@ export function bindUI() {
   const el = (id) => document.getElementById(id);
 
   return {
+    mainCard: el("mainCard"),
+    historyCard: el("historyCard"),
     netBadge: el("netBadge"),
     btnLogin: el("btnLogin"),
     btnTheme: el("btnTheme"),
@@ -107,6 +109,23 @@ export function renderAll(ui, state) {
   renderProgress(ui, state);
   renderStreak(ui, state);
   renderHistory(ui, state);
+  syncHistoryHeight(ui);
+}
+
+export function syncHistoryHeight(ui) {
+  if (!ui?.mainCard || !ui?.historyCard) return;
+
+  if (window.matchMedia("(max-width: 920px)").matches) {
+    ui.historyCard.style.height = "";
+    ui.historyCard.style.maxHeight = "";
+    return;
+  }
+
+  const mainHeight = ui.mainCard.getBoundingClientRect().height;
+  if (!mainHeight) return;
+
+  ui.historyCard.style.height = `${mainHeight}px`;
+  ui.historyCard.style.maxHeight = `${mainHeight}px`;
 }
 
 export function renderMeta(ui, state) {
@@ -282,6 +301,7 @@ export function renderHistory(ui, state) {
     ui.history.appendChild(card);
   }
 }
+
 
 
 
