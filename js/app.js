@@ -236,6 +236,7 @@ function wireEvents() {
 function doSaveEntry() {
   state.todayNote = ui.todayNote.value;
   state = addHistorySave(state);
+  state.todayNote = "";
   state = markOpened(state);
   renderAll(ui, state);
   persist().then(() => toast(ui, "Сохранено"));
@@ -289,3 +290,4 @@ function hardFail(err) {
   console.error(err);
   alert("BOOT FAIL: " + (err?.message || String(err)));
 }
+
