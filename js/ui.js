@@ -282,6 +282,10 @@ export function renderStreak(ui, state) {
     const cell = document.createElement("div");
     cell.className = "calCell";
     cell.textContent = String(d.getDate());
+    cell.dataset.dayKey = key;
+    cell.setAttribute("role", "button");
+    cell.setAttribute("tabindex", "0");
+    cell.setAttribute("aria-label", d.toLocaleDateString("ru-RU"));
     // закрашиваем, если есть любая запись в этот день
     if (days.has(key)) cell.classList.add("on");
     ui.calendar.appendChild(cell);
@@ -299,14 +303,41 @@ export function renderHistory(ui, state) {
     return;
   }
 
+  const groups = new Map();
+
   for (const e of state.history) {
+    const key = dayKey(e.ts);
+    let group = groups.get(key);
+    if (!group) {
+      group = document.createElement("div");
+      group.className = "histDay";
+      group.dataset.dayKey = key;
+
+      const title = document.createElement("div");
+      title.className = "histDayTitle";
+      title.textContent = new Date(e.ts).toLocaleDateString("ru-RU", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+      });
+
+      const cards = document.createElement("div");
+      cards.className = "histDayCards";
+
+      group.appendChild(title);
+      group.appendChild(cards);
+      ui.history.appendChild(group);
+      groups.set(key, group);
+    }
+
     const card = document.createElement("div");
     card.className = "histCard";
+    card.dataset.dayKey = key;
 
     const dt = new Date(e.ts);
     const h = document.createElement("div");
     h.className = "histTitle";
-    h.textContent = dt.toLocaleString();
+    h.textContent = dt.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
 
     const body = document.createElement("div");
     body.className = "histBody";
@@ -330,8 +361,18 @@ export function renderHistory(ui, state) {
 
     card.appendChild(h);
     card.appendChild(body);
-    ui.history.appendChild(card);
+    const cardsWrap = group.querySelector(".histDayCards");
+    cardsWrap.appendChild(card);
   }
 }
+
+export function scrollHistoryToDay(ui, key) {
+  if (!ui?.history || !key) return;
+  const entries = ui.history.querySelectorAll(`.histCard[data-day-key="${key}"]`);
+  if (!entries.length) return;
+  const target = entries[0];
+  target.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 
 
