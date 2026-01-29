@@ -3,7 +3,7 @@ import {
   defaultState, normalizeState, addGoal, deleteGoal,
   addHistorySave, markOpened
 } from "./state.js";
-import { loadInitialState, saveState, clearLocal } from "./storage.js";
+import { loadInitialState, saveState } from "./storage.js";
 import { bindUI, renderAll, startHistorySizer, syncHistoryHeight, toast, setOnlineBadge, setModeInfo } from "./ui.js";
 import { APP } from "./config.js";
 
@@ -136,17 +136,7 @@ function wireEvents() {
     if (e.ctrlKey && e.key === "Enter") doSaveEntry();
   });
 
-  ui.btnClearAll.addEventListener("click", async () => {
-    if (!confirm("Удалить всё?")) return;
-    clearLocal();
-    state = defaultState();
-    renderAll(ui, state);
-    markPendingSync();
-    await persist();
-    toast(ui, "Очищено");
-  });
-
-  ui.btnExport.addEventListener("click", () => {
+    ui.btnExport.addEventListener("click", () => {
     const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -495,5 +485,6 @@ function loadTheme() {
 function saveTheme(theme) {
   try { localStorage.setItem(THEME_KEY, theme); } catch {}
 }
+
 
 
