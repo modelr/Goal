@@ -1,7 +1,7 @@
 import { createSupabaseClient } from "./supabaseClient.js";
 import {
   defaultState, normalizeState, addGoal, deleteGoal,
-  addHistorySave, markOpened, dayKey
+  addHistorySave, markOpened
 } from "./state.js";
 import { loadInitialState, saveState } from "./storage.js";
 import { bindUI, renderAll, startHistorySizer, syncHistoryHeight, toast, setOnlineBadge, setModeInfo, scrollHistoryToDay } from "./ui.js";
@@ -16,7 +16,6 @@ let saving = false;
 let hasPendingSync = false;
 let offlineModalShown = false;
 let saveModalConfirmHandler = null;
-let historyAutoScrolled = false;
 const THEME_KEY = "goal-theme";
 
 boot().catch(err => hardFail(err));
@@ -42,8 +41,7 @@ async function boot() {
   setModeInfo(ui, mode, user);
   updateNetBadge();
   renderAll(ui, state);
-  historyAutoScrolled = false;
-  scrollHistoryToToday();
+  scrollToTop();
   startHistorySizer(ui);
   window.addEventListener("resize", () => syncHistoryHeight(ui));
 
@@ -63,8 +61,7 @@ async function boot() {
       setModeInfo(ui, mode, user);
       updateNetBadge();
       renderAll(ui, state);
-      historyAutoScrolled = false;
-      scrollHistoryToToday();
+      scrollToTop();
       toast(ui, user ? "Вошли, данные синхронизированы" : "Вышли, офлайн-режим");
     });
   }
@@ -182,29 +179,7 @@ function wireEvents() {
     });
   }
 
-    ui.btnExport.addEventListener("click", () => {
-    const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "goal-export.json";
-    a.click();
-    URL.revokeObjectURL(url);
-  });
-
-  ui.fileImport.addEventListener("change", async (e) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    const text = await f.text();
-    state = normalizeState(JSON.parse(text));
-    renderAll(ui, state);
-    markPendingSync();
-    await persist();
-    toast(ui, "Импортировано и сохранено");
-    e.target.value = "";
-  });
-
-  ui.btnLogin.addEventListener("click", async () => {
+    ui.btnLogin.addEventListener("click", async () => {
     if (!supabase) return toast(ui, "Supabase не настроен (URL/KEY)");
 
     const isLoggedIn = ui.btnLogin.textContent.includes("Выйти");
@@ -524,10 +499,8 @@ function hardFail(err) {
   alert("BOOT FAIL: " + (err?.message || String(err)));
 }
 
-function scrollHistoryToToday() {
-  if (historyAutoScrolled) return;
-  scrollHistoryToDay(ui, dayKey(Date.now()));
-  historyAutoScrolled = true;
+function scrollToTop() {
+  window.scrollTo({ top: 0, left: 0 });
 }
 
 function applyTheme(theme) {
@@ -570,4 +543,5 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
