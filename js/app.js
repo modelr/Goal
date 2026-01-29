@@ -1,7 +1,7 @@
 import { createSupabaseClient } from "./supabaseClient.js";
 import {
   defaultState, normalizeState, addGoal, deleteGoal,
-  addHistorySave, markOpened
+  addHistorySave, markOpened, completeGoal
 } from "./state.js";
 import { loadInitialState, saveState } from "./storage.js";
 import { bindUI, renderAll, startHistorySizer, syncHistoryHeight, toast, setOnlineBadge, setModeInfo, scrollHistoryToDay } from "./ui.js";
@@ -16,6 +16,7 @@ let saving = false;
 let hasPendingSync = false;
 let offlineModalShown = false;
 let saveModalConfirmHandler = null;
+let commentModalGoalId = null;
 const THEME_KEY = "goal-theme";
 
 boot().catch(err => hardFail(err));
@@ -126,18 +127,24 @@ function wireEvents() {
 
   ui.goalsList.addEventListener("change", (e) => {
     const t = e.target;
-    if (t?.dataset?.role !== "goalDone") return;
+    if (t?.dataset?.role !== "goalDaily") return;
     const id = t.dataset.goalId;
     const g = state.dailyGoals.find(x => x.id === id);
     if (!g) return;
-    g.doneToday = t.checked;
+    g.isDaily = t.checked;
     state = markOpened(state);
-    renderAll(ui, state);
     scheduleSave();
   });
 
   ui.goalsList.addEventListener("click", (e) => {
     const t = e.target;
+    if (t?.dataset?.role === "goalDoneAction") {
+      const id = t.dataset.goalId;
+      const g = state.dailyGoals.find(x => x.id === id);
+      if (!g) return;
+      openCommentModal(id);
+      return;
+    }
     if (t?.dataset?.role !== "goalDelete") return;
     state = deleteGoal(state, t.dataset.goalId);
     state = markOpened(state);
@@ -244,6 +251,20 @@ function wireEvents() {
       closeSaveModal();
     });
   }
+  if (ui.commentSaveBtn && ui.commentModal) {
+    ui.commentSaveBtn.addEventListener("click", () => {
+      if (!commentModalGoalId) return closeCommentModal();
+      const goalId = commentModalGoalId;
+      const g = state.dailyGoals.find(x => x.id === goalId);
+      if (!g) return closeCommentModal();
+      const comment = (ui.commentInput?.value || "").trim();
+      state = completeGoal(state, goalId, { comment, keepGoal: !!g.isDaily });
+      state = markOpened(state);
+      renderAll(ui, state);
+      scheduleSave();
+      closeCommentModal();
+    });
+  }
 
   // auth modal: send magic link
   if (ui.sendLinkBtn && ui.authEmail) {
@@ -299,6 +320,13 @@ function wireEvents() {
       if (e.target === ui.saveModal) {
         saveModalConfirmHandler = null;
         closeSaveModal();
+      }
+    });
+  }
+  if (ui.commentModal) {
+    ui.commentModal.addEventListener("click", (e) => {
+      if (e.target === ui.commentModal) {
+        closeCommentModal();
       }
     });
   }
@@ -388,6 +416,22 @@ function closeSaveModal() {
   if (!ui.saveModal) return;
   ui.saveModal.classList.remove("show");
   ui.saveModal.hidden = true;
+}
+
+function openCommentModal(goalId) {
+  if (!ui.commentModal) return;
+  commentModalGoalId = goalId;
+  if (ui.commentInput) ui.commentInput.value = "";
+  ui.commentModal.hidden = false;
+  ui.commentModal.classList.add("show");
+  if (ui.commentInput) ui.commentInput.focus();
+}
+
+function closeCommentModal() {
+  if (!ui.commentModal) return;
+  ui.commentModal.classList.remove("show");
+  ui.commentModal.hidden = true;
+  commentModalGoalId = null;
 }
 
 function renderSaveTasks(tasks, showTasks) {
@@ -543,5 +587,6 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
