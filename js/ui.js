@@ -44,6 +44,7 @@ export function bindUI() {
     commentModal: el("commentModal"),
     commentInput: el("commentInput"),
     commentSaveBtn: el("commentSaveBtn"),
+    commentCancelBtn: el("commentCancelBtn"),
 
   };
 }
@@ -220,7 +221,7 @@ export function renderGoals(ui, state) {
     label.textContent = `Цель #${idx + 1}`;
 
     const daily = document.createElement("label");
-    daily.className = "pill";
+    daily.className = "pill goalAction";
     const dailyCb = document.createElement("input");
     dailyCb.type = "checkbox";
     dailyCb.checked = !!g.isDaily;
@@ -238,13 +239,13 @@ export function renderGoals(ui, state) {
     input.dataset.role = "goalText";
 
     const doneBtn = document.createElement("button");
-    doneBtn.className = "pill btn goalDoneBtn";
+    doneBtn.className = "pill btn goalDoneBtn goalAction";
     doneBtn.dataset.goalId = g.id;
     doneBtn.dataset.role = "goalDoneAction";
     doneBtn.textContent = "Сделано сегодня";
 
     const del = document.createElement("button");
-    del.className = "btn red";
+    del.className = "btn red goalAction goalDeleteBtn";
     del.textContent = "🗑️";
     del.dataset.goalId = g.id;
     del.dataset.role = "goalDelete";
@@ -360,9 +361,10 @@ export function renderHistory(ui, state) {
     } else if (e.type === "done_goal") {
       const text = e.payload?.text || "";
       const comment = e.payload?.comment || "";
+      const label = e.payload?.isDaily ? "Сделана ежедневная цель" : "Сделана цель";
       body.textContent = comment
-        ? `Сделана цель: «${text}»\nКомментарий: ${comment}`.trim()
-        : `Сделана цель: «${text}»`.trim();
+        ? `${label}: «${text}»\nКомментарий: ${comment}`.trim()
+        : `${label}: «${text}»`.trim();
     } else if (e.type === "save") {
       const p = e.payload || {};
       const parts = [];
@@ -391,6 +393,7 @@ export function scrollHistoryToDay(ui, key) {
   const target = entries[0];
   target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
 
 
 
