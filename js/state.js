@@ -94,8 +94,6 @@ export function addHistorySave(s, options = {}) {
     ts: nowMs(),
     type: "save",
     payload: {
-      stake: s.stake?.text || "",
-      stakeDone: !!s.stake?.done,
       done: prog.done,
       total: prog.total,
       note: s.todayNote || "",
@@ -143,6 +141,7 @@ export function computeStreak(history) {
 
   return { streak, todayCounted };
 }
+
 
 
 
