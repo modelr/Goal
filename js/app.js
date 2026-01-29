@@ -15,6 +15,7 @@ let mode = "local";
 let saving = false;
 let hasPendingSync = false;
 let offlineModalShown = false;
+let saveModalConfirmHandler = null;
 const THEME_KEY = "goal-theme";
 
 boot().catch(err => hardFail(err));
@@ -206,6 +207,24 @@ function wireEvents() {
     });
   }
 
+  if (ui.saveConfirmBtn && ui.saveModal) {
+    ui.saveConfirmBtn.addEventListener("click", () => {
+      if (saveModalConfirmHandler) {
+        const handler = saveModalConfirmHandler;
+        saveModalConfirmHandler = null;
+        handler();
+      }
+      closeSaveModal();
+    });
+  }
+
+  if (ui.saveCancelBtn && ui.saveModal) {
+    ui.saveCancelBtn.addEventListener("click", () => {
+      saveModalConfirmHandler = null;
+      closeSaveModal();
+    });
+  }
+
   // auth modal: send magic link
   if (ui.sendLinkBtn && ui.authEmail) {
     ui.sendLinkBtn.addEventListener("click", async () => {
@@ -255,6 +274,14 @@ function wireEvents() {
       }
     });
   }
+  if (ui.saveModal) {
+    ui.saveModal.addEventListener("click", (e) => {
+      if (e.target === ui.saveModal) {
+        saveModalConfirmHandler = null;
+        closeSaveModal();
+      }
+    });
+  }
  ui.btnTheme.addEventListener("click", () => {
     const nextTheme = document.documentElement.getAttribute("data-theme") === "light"
       ? "dark"
@@ -265,13 +292,116 @@ function wireEvents() {
 }
 
 function doSaveEntry() {
-  state.todayNote = ui.todayNote.value;
-  state = addHistorySave(state);
+  const note = ui.todayNote.value.trim();
+  if (!note) {
+    openSaveModal({
+      title: "Нужна отметка",
+      message: "Введите то, что сделали за сегодня в направлении к вашей долгосрочной цели.",
+      showTasks: false,
+      confirmLabel: "Ок",
+      showCancel: false,
+      onConfirm: null,
+    });
+    return;
+  }
+
+  const activeGoals = getActiveGoals(state);
+  openSaveModal({
+    title: "Сохранить запись",
+    message: "Выберите задачу по которой работали Сегодня.",
+    showTasks: true,
+    tasks: activeGoals,
+    confirmLabel: "Сохранить запись",
+    showCancel: true,
+    onConfirm: () => {
+      const selectedGoal = getSelectedGoalText();
+      finalizeSaveEntry({ focusGoal: selectedGoal });
+    },
+  });
+}
+
+function finalizeSaveEntry({ focusGoal }) {
+  state.todayNote = ui.todayNote.value.trim();
+  state = addHistorySave(state, { focusGoal });
   state.todayNote = "";
   state = markOpened(state);
   renderAll(ui, state);
   markPendingSync();
   persist().then(() => toast(ui, "Сохранено"));
+}
+
+function getActiveGoals(s) {
+  return (s?.dailyGoals || [])
+    .map(g => ({ id: g.id, text: String(g.text || "").trim() }))
+    .filter(g => g.text);
+}
+
+function getSelectedGoalText() {
+  if (!ui.saveTaskList) return "";
+  const input = ui.saveTaskList.querySelector("input[name='saveGoal']:checked");
+  return input?.value || "";
+}
+
+function openSaveModal({
+  title,
+  message,
+  showTasks,
+  tasks = [],
+  confirmLabel = "Ок",
+  showCancel = true,
+  onConfirm,
+}) {
+  if (!ui.saveModal) return;
+  if (ui.saveTitle) ui.saveTitle.textContent = title;
+  if (ui.saveMessage) ui.saveMessage.textContent = message;
+  if (ui.saveConfirmBtn) ui.saveConfirmBtn.textContent = confirmLabel;
+  if (ui.saveCancelBtn) ui.saveCancelBtn.hidden = !showCancel;
+
+  renderSaveTasks(tasks, showTasks);
+
+  saveModalConfirmHandler = onConfirm;
+  ui.saveModal.hidden = false;
+  ui.saveModal.classList.add("show");
+}
+
+function closeSaveModal() {
+  if (!ui.saveModal) return;
+  ui.saveModal.classList.remove("show");
+  ui.saveModal.hidden = true;
+}
+
+function renderSaveTasks(tasks, showTasks) {
+  if (!ui.saveTaskList) return;
+  ui.saveTaskList.innerHTML = "";
+  ui.saveTaskList.hidden = !showTasks;
+  if (!showTasks) return;
+
+  if (!tasks.length) {
+    const empty = document.createElement("div");
+    empty.className = "muted small";
+    empty.textContent = "Активных задач нет.";
+    ui.saveTaskList.appendChild(empty);
+    return;
+  }
+
+  tasks.forEach((task, index) => {
+    const label = document.createElement("label");
+    label.className = "taskOption";
+
+    const input = document.createElement("input");
+    input.type = "radio";
+    input.name = "saveGoal";
+    input.value = task.text;
+    input.dataset.goalId = task.id;
+    if (index === 0) input.checked = true;
+
+    const text = document.createElement("span");
+    text.textContent = task.text;
+
+    label.appendChild(input);
+    label.appendChild(text);
+    ui.saveTaskList.appendChild(label);
+  });
 }
 
 let saveTimer = null;
@@ -368,3 +498,4 @@ function loadTheme() {
 function saveTheme(theme) {
   try { localStorage.setItem(THEME_KEY, theme); } catch {}
 }
+
