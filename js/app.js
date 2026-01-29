@@ -338,8 +338,8 @@ function getActiveGoals(s) {
 
 function getSelectedGoalText() {
   if (!ui.saveTaskList) return "";
-  const input = ui.saveTaskList.querySelector("input[name='saveGoal']:checked");
-  return input?.value || "";
+  const select = ui.saveTaskList.querySelector("select[name='saveGoal']");
+  return select?.value || "";
 }
 
 function openSaveModal({
@@ -384,24 +384,21 @@ function renderSaveTasks(tasks, showTasks) {
     return;
   }
 
+  const select = document.createElement("select");
+  select.name = "saveGoal";
+  select.className = "modalSelect";
+  select.setAttribute("aria-label", "Выбор задачи");
+
   tasks.forEach((task, index) => {
-    const label = document.createElement("label");
-    label.className = "taskOption";
-
-    const input = document.createElement("input");
-    input.type = "radio";
-    input.name = "saveGoal";
-    input.value = task.text;
-    input.dataset.goalId = task.id;
-    if (index === 0) input.checked = true;
-
-    const text = document.createElement("span");
-    text.textContent = task.text;
-
-    label.appendChild(input);
-    label.appendChild(text);
-    ui.saveTaskList.appendChild(label);
+    const option = document.createElement("option");
+    option.value = task.text;
+    option.textContent = task.text;
+    option.dataset.goalId = task.id;
+    if (index === 0) option.selected = true;
+    select.appendChild(option);
   });
+
+  ui.saveTaskList.appendChild(select);
 }
 
 let saveTimer = null;
@@ -498,4 +495,5 @@ function loadTheme() {
 function saveTheme(theme) {
   try { localStorage.setItem(THEME_KEY, theme); } catch {}
 }
+
 
