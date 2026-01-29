@@ -7,9 +7,9 @@ export function defaultState() {
     v: APP.VERSION,
     lastOpenAt: nowMs(),
     stake: { text: "", done: false, createdAt: nowMs(), doneAt: null },
-    dailyGoals: [{ id: uid(), text: "", doneToday: false }],
+    dailyGoals: [{ id: uid(), text: "", doneToday: false, isDaily: false }],
     todayNote: "",
-    // история: массив записей
+    // история: массив записей␊
     history: [], // {ts, type, payload}
   };
 }
@@ -24,13 +24,14 @@ export function normalizeState(s) {
   if (!out.stake.createdAt) out.stake.createdAt = nowMs();
 
   // dailyGoals: по дефолту одна
-  if (!Array.isArray(out.dailyGoals) || out.dailyGoals.length === 0) {
-    out.dailyGoals = [{ id: uid(), text: "", doneToday: false }];
+   if (!Array.isArray(out.dailyGoals) || out.dailyGoals.length === 0) {
+    out.dailyGoals = [{ id: uid(), text: "", doneToday: false, isDaily: false }];
   } else {
     out.dailyGoals = out.dailyGoals.map(g => ({
       id: g?.id || uid(),
       text: String(g?.text ?? ""),
       doneToday: !!g?.doneToday,
+      isDaily: !!g?.isDaily,
     }));
   }
 
@@ -62,7 +63,7 @@ export function markOpened(s) {
 }
 
 export function addGoal(s) {
-  const goals = [...s.dailyGoals, { id: uid(), text: "", doneToday: false }];
+  const goals = [...s.dailyGoals, { id: uid(), text: "", doneToday: false, isDaily: false }];
   return { ...s, dailyGoals: goals };
 }
 
@@ -78,7 +79,35 @@ export function deleteGoal(s, goalId) {
     payload: { text: g?.text || "", goalId }
   }, ...s.history];
 
-  return { ...s, dailyGoals: goals.length ? goals : [{ id: uid(), text: "", doneToday: false }], history };
+  return { ...s, dailyGoals: goals.length ? goals : [{ id: uid(), text: "", doneToday: false, isDaily: false }], history };
+}
+
+export function completeGoal(s, goalId, { comment = "", keepGoal = false } = {}) {
+  const g = s.dailyGoals.find(x => x.id === goalId);
+  if (!g) return s;
+  const entry = {
+    ts: nowMs(),
+    type: "done_goal",
+    payload: {
+      text: g.text || "",
+      goalId,
+      comment: String(comment ?? ""),
+    },
+  };
+
+  let goals = s.dailyGoals;
+  if (keepGoal) {
+    goals = s.dailyGoals.map(goal => (
+      goal.id === goalId ? { ...goal, doneToday: true } : goal
+    ));
+  } else {
+    goals = s.dailyGoals.filter(goal => goal.id !== goalId);
+    if (!goals.length) {
+      goals = [{ id: uid(), text: "", doneToday: false, isDaily: false }];
+    }
+  }
+
+  return { ...s, dailyGoals: goals, history: [entry, ...s.history] };
 }
 
 export function computeProgress(s) {
@@ -141,6 +170,7 @@ export function computeStreak(history) {
 
   return { streak, todayCounted };
 }
+
 
 
 
