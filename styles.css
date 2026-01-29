@@ -202,6 +202,29 @@ textarea{
 
 .btn:hover{ background: rgba(255,255,255,.10); }
 .btn:active{ transform: translateY(1px); }
+.btn:disabled{
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn.is-loading{
+  cursor: wait;
+}
+
+.btn.is-loading::after{
+  content: "";
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  display: inline-block;
+  animation: btnSpinner 0.8s linear infinite;
+}
+
+@keyframes btnSpinner{
+  to{ transform: rotate(360deg); }
+}
 
 /* Preferred class names from одностраничника */
 .btn.primary{
@@ -571,6 +594,7 @@ button.pill.btn { cursor: pointer; }
 .taskOption input{
   margin: 0;
 }
+
 
 
 
