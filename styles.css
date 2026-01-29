@@ -376,6 +376,7 @@ textarea{
   overflow:hidden;
   padding: 0;
   text-align:center;
+  cursor: pointer;
 }
 .calCell.on{
   color: rgba(255,255,255,.92);
@@ -406,6 +407,7 @@ textarea{
   padding-right: 4px;
   flex: 1 1 auto;
   min-height: 0;
+  scrollbar-gutter: stable;
 }
 .historyCard{
   display:flex;
@@ -425,10 +427,32 @@ textarea{
   padding: 12px;
   background: rgba(255,255,255,.03);
 }
+.histDay{
+  display:flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.histDayTitle{
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--muted);
+}
+.histDayCards{
+  display:flex;
+  flex-direction: column;
+  gap: 10px;
+}
 .entry b,
 .histTitle{ display:block; margin-bottom:6px; font-weight:700; }
 .histBody{ white-space:pre-wrap; color: var(--muted); }
 
+@media (max-width: 920px){
+  .history{
+    max-height: 460px;
+    overflow-y: auto;
+  }
+}
 /* Toast */
 .toast{
   position: fixed;
@@ -547,5 +571,6 @@ button.pill.btn { cursor: pointer; }
 .taskOption input{
   margin: 0;
 }
+
 
 
