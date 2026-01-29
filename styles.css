@@ -3,6 +3,8 @@
 
 :root{
   --bg: #0b1220;
+  --bg-gradient-1: rgba(124,58,237,.35);
+  --bg-gradient-2: rgba(34,197,94,.22);
   --card: rgba(255,255,255,.06);
   --text: rgba(255,255,255,.92);
   --muted: rgba(255,255,255,.78);
@@ -18,13 +20,17 @@
 }
 
 [data-theme="light"]{
-  --bg: #f6f7fb;
-  --card: rgba(0,0,0,.04);
-  --text: rgba(0,0,0,.90);
-  --muted: rgba(0,0,0,.55);
-  --line: rgba(0,0,0,.10);
-  --shadow: 0 18px 50px rgba(0,0,0,.12);
-  --topbar-bg: rgba(246, 247, 251, 0.92);
+  --bg: #f9f3ea;
+  --bg-gradient-1: rgba(251, 191, 114, 0.42);
+  --bg-gradient-2: rgba(251, 146, 60, 0.28);
+  --card: rgba(255, 248, 236, 0.92);
+  --text: rgba(52, 32, 16, 0.92);
+  --muted: rgba(92, 64, 40, 0.62);
+  --line: rgba(134, 96, 64, 0.18);
+  --accent: #f97316;
+  --accent2: #f59e0b;
+  --shadow: 0 18px 40px rgba(139, 97, 60, 0.18);
+  --topbar-bg: rgba(255, 246, 232, 0.96);
 }
 
 *{ box-sizing:border-box; }
@@ -32,8 +38,8 @@
 body{
   margin:0;
   background:
-    radial-gradient(1200px 700px at 20% -10%, rgba(124,58,237,.35), transparent 60%),
-    radial-gradient(900px 500px at 90% 0%, rgba(34,197,94,.22), transparent 55%),
+    radial-gradient(1200px 700px at 20% -10%, var(--bg-gradient-1), transparent 60%),
+    radial-gradient(900px 500px at 90% 0%, var(--bg-gradient-2), transparent 55%),
     var(--bg);
   color: var(--text);
   min-height:100vh;
@@ -266,6 +272,17 @@ textarea{
   border-color: rgba(239,68,68,.55);
 }
 
+[data-theme="light"] .btn.primary,
+[data-theme="light"] .btn.purple{
+  background: linear-gradient(135deg, rgba(249,115,22,.95), rgba(251,146,60,.72));
+  border-color: rgba(249,115,22,.55);
+}
+[data-theme="light"] .btn.success,
+[data-theme="light"] .btn.green{
+  background: linear-gradient(135deg, rgba(245,158,11,.92), rgba(251,191,36,.70));
+  border-color: rgba(245,158,11,.55);
+}
+
 /* Pills */
 .pill{
   font-size: 12px;
@@ -310,6 +327,12 @@ textarea{
   width:0%;
   background: linear-gradient(90deg, rgba(124,58,237,1), rgba(34,197,94,1));
   transition: width .25s ease;
+}
+
+[data-theme="light"] .bar > div,
+[data-theme="light"] .bar .fill,
+[data-theme="light"] .bar #barFill{
+  background: linear-gradient(90deg, rgba(249,115,22,1), rgba(251,191,36,1));
 }
 
 /* Two-column buttons */
@@ -416,6 +439,13 @@ textarea{
   color: rgba(255,255,255,.92);
   background: linear-gradient(135deg, rgba(34,197,94,.85), rgba(124,58,237,.70));
   border-color: rgba(34,197,94,.45);
+}
+
+[data-theme="light"] .cell.done,
+[data-theme="light"] .calCell.on{
+  color: rgba(255,255,255,.96);
+  background: linear-gradient(135deg, rgba(249,115,22,.90), rgba(251,191,36,.80));
+  border-color: rgba(249,115,22,.45);
 }
 
 /* Legend tags */
@@ -605,6 +635,7 @@ button.pill.btn { cursor: pointer; }
 .taskOption input{
   margin: 0;
 }
+
 
 
 
