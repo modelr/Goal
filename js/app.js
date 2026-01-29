@@ -265,6 +265,11 @@ function wireEvents() {
       closeCommentModal();
     });
   }
+  if (ui.commentCancelBtn && ui.commentModal) {
+    ui.commentCancelBtn.addEventListener("click", () => {
+      closeCommentModal();
+    });
+  }
 
   // auth modal: send magic link
   if (ui.sendLinkBtn && ui.authEmail) {
@@ -587,6 +592,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
