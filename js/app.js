@@ -1,10 +1,11 @@
 import { createSupabaseClient } from "./supabaseClient.js";
 import {
+import {
   defaultState, normalizeState, addGoal, deleteGoal,
-  addHistorySave, markOpened
+  addHistorySave, markOpened, dayKey
 } from "./state.js";
 import { loadInitialState, saveState } from "./storage.js";
-import { bindUI, renderAll, startHistorySizer, syncHistoryHeight, toast, setOnlineBadge, setModeInfo } from "./ui.js";
+import { bindUI, renderAll, startHistorySizer, syncHistoryHeight, toast, setOnlineBadge, setModeInfo, scrollHistoryToDay } from "./ui.js";
 import { APP } from "./config.js";
 
 const ui = bindUI();
@@ -16,6 +17,7 @@ let saving = false;
 let hasPendingSync = false;
 let offlineModalShown = false;
 let saveModalConfirmHandler = null;
+let historyAutoScrolled = false;
 const THEME_KEY = "goal-theme";
 
 boot().catch(err => hardFail(err));
@@ -38,6 +40,8 @@ async function boot() {
   setModeInfo(ui, mode, user);
   updateNetBadge();
   renderAll(ui, state);
+  historyAutoScrolled = false;
+  scrollHistoryToToday();
   startHistorySizer(ui);
   window.addEventListener("resize", () => syncHistoryHeight(ui));
 
@@ -56,6 +60,8 @@ async function boot() {
       setModeInfo(ui, mode, user);
       updateNetBadge();
       renderAll(ui, state);
+      historyAutoScrolled = false;
+      scrollHistoryToToday();
       toast(ui, user ? "Вошли, данные синхронизированы" : "Вышли, офлайн-режим");
     });
   }
@@ -135,6 +141,22 @@ function wireEvents() {
   window.addEventListener("keydown", (e) => {
     if (e.ctrlKey && e.key === "Enter") doSaveEntry();
   });
+
+  if (ui.calendar) {
+    ui.calendar.addEventListener("click", (e) => {
+      const cell = e.target.closest(".calCell");
+      if (!cell?.dataset?.dayKey) return;
+      scrollHistoryToDay(ui, cell.dataset.dayKey);
+    });
+
+    ui.calendar.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" && e.key !== " ") return;
+      const cell = e.target.closest(".calCell");
+      if (!cell?.dataset?.dayKey) return;
+      e.preventDefault();
+      scrollHistoryToDay(ui, cell.dataset.dayKey);
+    });
+  }
 
     ui.btnExport.addEventListener("click", () => {
     const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
@@ -469,6 +491,12 @@ function hardFail(err) {
   alert("BOOT FAIL: " + (err?.message || String(err)));
 }
 
+function scrollHistoryToToday() {
+  if (historyAutoScrolled) return;
+  scrollHistoryToDay(ui, dayKey(Date.now()));
+  historyAutoScrolled = true;
+}
+
 function applyTheme(theme) {
   if (theme === "light") {
     document.documentElement.setAttribute("data-theme", "light");
@@ -485,6 +513,7 @@ function loadTheme() {
 function saveTheme(theme) {
   try { localStorage.setItem(THEME_KEY, theme); } catch {}
 }
+
 
 
 
