@@ -9,8 +9,6 @@ export function bindUI() {
     netBadge: el("netBadge"),
     btnLogin: el("btnLogin"),
     btnTheme: el("btnTheme"),
-    btnExport: el("btnExport"),
-    fileImport: el("fileImport"),
 
     stakeInput: el("stakeInput"),
     stakeDoneBtn: el("stakeDoneBtn"),
@@ -376,4 +374,5 @@ export function scrollHistoryToDay(ui, key) {
   const target = entries[0];
   target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
 
