@@ -468,7 +468,7 @@ textarea{
 .modalBackdrop{
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.55);
+  background: rgba(0,0,0,.75);
   display:none;
   align-items:center;
   justify-content:center;
@@ -479,7 +479,7 @@ textarea{
 
 .modal{
   width: min(520px, 100%);
-  background: linear-gradient(180deg, var(--card), rgba(255,255,255,.02));
+  background: linear-gradient(180deg, rgba(17,17,17,.98), rgba(17,17,17,.94));
   border: 1px solid var(--line);
   border-radius: 18px;
   box-shadow: var(--shadow);
@@ -494,7 +494,7 @@ textarea{
 
 .modal{
   width: min(520px, 100%);
-  background: var(--card, #111);
+  background: rgba(17,17,17,.98);
   border: 1px solid rgba(255,255,255,.12);
   border-radius: 18px;
   padding: 16px;
@@ -507,6 +507,21 @@ button.pill.btn { cursor: pointer; }
   display: grid;
   gap: 8px;
   margin: 6px 0 10px;
+}
+
+.modalSelect{
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.04);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.modalSelect:focus{
+  outline: 2px solid rgba(136,84,255,.4);
+  outline-offset: 2px;
 }
 
 .taskOption{
@@ -525,3 +540,4 @@ button.pill.btn { cursor: pointer; }
 .taskOption input{
   margin: 0;
 }
+
