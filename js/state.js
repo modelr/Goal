@@ -85,8 +85,9 @@ export function computeProgress(s) {
   return { done, total, pct: total ? Math.round((done/total)*100) : 0 };
 }
 
-export function addHistorySave(s) {
+export function addHistorySave(s, options = {}) {
   const prog = computeProgress(s);
+  const focusGoal = String(options.focusGoal || "");
   const entry = {
     ts: nowMs(),
     type: "save",
@@ -96,6 +97,7 @@ export function addHistorySave(s) {
       done: prog.done,
       total: prog.total,
       note: s.todayNote || "",
+      focusGoal,
       goals: s.dailyGoals.map(g => ({ text: g.text || "", doneToday: !!g.doneToday })),
     }
   };
@@ -133,6 +135,7 @@ export function computeStreak(history) {
   }
   return { streak, todayCounted: map.has(dayKey(Date.now())) };
 }
+
 
 
 
