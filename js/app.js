@@ -24,6 +24,9 @@ boot().catch(err => hardFail(err));
 async function boot() {
   installGuards();
   applyTheme(loadTheme());
+  setLoginLoading(false);
+
+  await handleAuthRedirect();
 
   updateNetBadge();
   window.addEventListener("online", () => updateNetBadge());
@@ -70,6 +73,27 @@ async function boot() {
     goalsListChildren: ui.goalsList.children.length,
     calendarChildren: ui.calendar.children.length
   });
+}
+
+async function handleAuthRedirect() {
+  if (!supabase) return;
+  const hash = window.location.hash?.replace(/^#/, "");
+  if (!hash) return;
+  const params = new URLSearchParams(hash);
+  const accessToken = params.get("access_token");
+  const refreshToken = params.get("refresh_token");
+  if (!accessToken || !refreshToken) return;
+
+  const { error } = await supabase.auth.setSession({
+    access_token: accessToken,
+    refresh_token: refreshToken,
+  });
+
+  if (error) {
+    toast(ui, "Ошибка входа: " + (error.message || String(error)));
+  }
+
+  history.replaceState(null, "", window.location.origin + window.location.pathname);
 }
 
 function wireEvents() {
@@ -546,3 +570,4 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
