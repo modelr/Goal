@@ -124,17 +124,25 @@ export function dayKey(ts) {
 
 export function computeStreak(history) {
   const map = daysMapFromHistory(history);
+
+  const todayKey = dayKey(Date.now());
+  const todayCounted = map.has(todayKey);
+
   let streak = 0;
-  let cur = new Date();
-  // считаем подряд назад
-  while (true) {
-    const key = dayKey(cur.getTime());
-    if (!map.has(key)) break;
+  const cur = new Date();
+
+  // если сегодня не засчитан — начинаем с вчера
+  if (!todayCounted) cur.setDate(cur.getDate() - 1);
+
+  while (map.has(dayKey(cur.getTime()))) {
     streak++;
-    cur.setDate(cur.getDate()-1);
+    cur.setDate(cur.getDate() - 1);
   }
-  return { streak, todayCounted: map.has(dayKey(Date.now())) };
+
+  return { streak, todayCounted };
 }
+
+
 
 
 
