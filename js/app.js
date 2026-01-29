@@ -1,6 +1,5 @@
 import { createSupabaseClient } from "./supabaseClient.js";
 import {
-import {
   defaultState, normalizeState, addGoal, deleteGoal,
   addHistorySave, markOpened, dayKey
 } from "./state.js";
@@ -513,6 +512,7 @@ function loadTheme() {
 function saveTheme(theme) {
   try { localStorage.setItem(THEME_KEY, theme); } catch {}
 }
+
 
 
 
