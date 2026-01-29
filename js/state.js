@@ -92,6 +92,7 @@ export function completeGoal(s, goalId, { comment = "", keepGoal = false } = {})
       text: g.text || "",
       goalId,
       comment: String(comment ?? ""),
+      isDaily: !!g.isDaily,
     },
   };
 
@@ -170,6 +171,7 @@ export function computeStreak(history) {
 
   return { streak, todayCounted };
 }
+
 
 
 
