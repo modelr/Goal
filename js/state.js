@@ -47,7 +47,9 @@ export function uid() {
 export function lastActionAt(s) {
   const history = Array.isArray(s?.history) ? s.history : [];
   if (history.length === 0) return s?.lastOpenAt || nowMs();
-  const lastHistoryTs = history.reduce((max, entry) => Math.max(max, entry?.ts || 0), 0);
+  const lastHistoryTs = history
+    .filter(entry => entry?.type !== "delete_goal")
+    .reduce((max, entry) => Math.max(max, entry?.ts || 0), 0);
   return lastHistoryTs || s?.lastOpenAt || nowMs();
 }
 
@@ -141,6 +143,7 @@ export function computeStreak(history) {
 
   return { streak, todayCounted };
 }
+
 
 
 
