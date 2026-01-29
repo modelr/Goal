@@ -37,14 +37,16 @@ export function bindUI() {
 
     toast: el("toast"),
 	
-	authModal: el("authModal"),
-    authEmail: el("authEmail"),
-    sendLinkBtn: el("sendLinkBtn"),
-    closeAuthBtn: el("closeAuthBtn"),
-    authStatus: el("authStatus"),
+	authStatus: el("authStatus"),
     offlineModal: el("offlineModal"),
     offlineMessage: el("offlineMessage"),
     offlineOkBtn: el("offlineOkBtn"),
+    saveModal: el("saveModal"),
+    saveTitle: el("saveTitle"),
+    saveMessage: el("saveMessage"),
+    saveTaskList: el("saveTaskList"),
+    saveConfirmBtn: el("saveConfirmBtn"),
+    saveCancelBtn: el("saveCancelBtn"),
 
   };
 }
@@ -331,6 +333,7 @@ export function renderHistory(ui, state) {
       body.textContent =
         `Ставка: ${p.stake || "—"}\n` +
         `День: выполнено ${p.done}/${p.total}\n` +
+        (p.focusGoal ? `Задача: ${p.focusGoal}\n` : "") +
         (p.note ? `\n${p.note}` : "");
     } else {
       body.textContent = JSON.stringify(e, null, 2);
@@ -341,3 +344,4 @@ export function renderHistory(ui, state) {
     ui.history.appendChild(card);
   }
 }
+
