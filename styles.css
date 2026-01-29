@@ -362,11 +362,20 @@ textarea{
   gap:10px;
   flex-wrap:wrap;
 }
+.goalHeader{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  flex-wrap:wrap;
+}
 .goalControls{
   display:flex;
   gap:12px;
   align-items:center;
   flex-wrap:wrap;
+}
+.goalDoneBtn{
+  font-weight: 500;
 }
 
 .inlineCheck{
@@ -635,6 +644,7 @@ button.pill.btn { cursor: pointer; }
 .taskOption input{
   margin: 0;
 }
+
 
 
 
