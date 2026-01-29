@@ -517,11 +517,18 @@ button.pill.btn { cursor: pointer; }
   background: rgba(255,255,255,.04);
   color: var(--text);
   font-size: 13px;
+  appearance: none;
 }
 
 .modalSelect:focus{
   outline: 2px solid rgba(136,84,255,.4);
   outline-offset: 2px;
+}
+
+.modalSelect option,
+.modalSelect optgroup{
+  background: rgba(17,17,17,.98);
+  color: var(--text);
 }
 
 .taskOption{
@@ -540,4 +547,5 @@ button.pill.btn { cursor: pointer; }
 .taskOption input{
   margin: 0;
 }
+
 
