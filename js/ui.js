@@ -348,13 +348,16 @@ export function renderHistory(ui, state) {
     } else if (e.type === "done_goal") {
       const text = e.payload?.text || "";
       body.textContent = `Сделана цель: «${text}»`.trim();
-    } else if (e.type === "save") {␊
-      const p = e.payload || {};␊
-      const noteBlock = p.note ? `\nСделано сегодня:\n${p.note}` : "";
-      body.textContent =
-        `День: выполнено ${p.done}/${p.total}\n` +␊
-        (p.focusGoal ? `Задача: ${p.focusGoal}\n` : "") +␊
-        noteBlock;
+    } else if (e.type === "save") {
+      const p = e.payload || {};
+      const parts = [];
+      if (p.focusGoal) {
+        parts.push(`Задача: ${p.focusGoal}`);
+      }
+      if (p.note) {
+        parts.push(`Сделано сегодня: "${p.note}"`);
+      }
+      body.textContent = parts.join("\n\n");
     } else {
       body.textContent = JSON.stringify(e, null, 2);
     }
@@ -373,7 +376,3 @@ export function scrollHistoryToDay(ui, key) {
   const target = entries[0];
   target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
-
-
-
-
