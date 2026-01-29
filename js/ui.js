@@ -357,7 +357,7 @@ export function renderHistory(ui, state) {
       if (p.note) {
         parts.push(`Сделано сегодня: "${p.note}"`);
       }
-      body.textContent = parts.join("\n\n");
+      body.textContent = parts.join("\n");
     } else {
       body.textContent = JSON.stringify(e, null, 2);
     }
@@ -376,3 +376,4 @@ export function scrollHistoryToDay(ui, key) {
   const target = entries[0];
   target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
