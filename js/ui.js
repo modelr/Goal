@@ -41,6 +41,9 @@ export function bindUI() {
     saveTaskList: el("saveTaskList"),
     saveConfirmBtn: el("saveConfirmBtn"),
     saveCancelBtn: el("saveCancelBtn"),
+    commentModal: el("commentModal"),
+    commentInput: el("commentInput"),
+    commentSaveBtn: el("commentSaveBtn"),
 
   };
 }
@@ -216,6 +219,17 @@ export function renderGoals(ui, state) {
     label.className = "pill mutedPill";
     label.textContent = `Цель #${idx + 1}`;
 
+    const daily = document.createElement("label");
+    daily.className = "pill";
+    const dailyCb = document.createElement("input");
+    dailyCb.type = "checkbox";
+    dailyCb.checked = !!g.isDaily;
+    dailyCb.dataset.goalId = g.id;
+    dailyCb.dataset.role = "goalDaily";
+    dailyCb.style.marginRight = "8px";
+    daily.appendChild(dailyCb);
+    daily.appendChild(document.createTextNode("Ежедневная"));
+
     const input = document.createElement("input");
     input.className = "input";
     input.value = g.text || "";
@@ -223,16 +237,11 @@ export function renderGoals(ui, state) {
     input.dataset.goalId = g.id;
     input.dataset.role = "goalText";
 
-    const chk = document.createElement("label");
-    chk.className = "pill";
-    const cb = document.createElement("input");
-    cb.type = "checkbox";
-    cb.checked = !!g.doneToday;
-    cb.dataset.goalId = g.id;
-    cb.dataset.role = "goalDone";
-    cb.style.marginRight = "8px";
-    chk.appendChild(cb);
-    chk.appendChild(document.createTextNode("Сделано сегодня"));
+    const doneBtn = document.createElement("button");
+    doneBtn.className = "pill btn goalDoneBtn";
+    doneBtn.dataset.goalId = g.id;
+    doneBtn.dataset.role = "goalDoneAction";
+    doneBtn.textContent = "Сделано сегодня";
 
     const del = document.createElement("button");
     del.className = "btn red";
@@ -240,14 +249,19 @@ export function renderGoals(ui, state) {
     del.dataset.goalId = g.id;
     del.dataset.role = "goalDelete";
 
+    const header = document.createElement("div");
+    header.className = "goalHeader";
+    header.appendChild(label);
+    header.appendChild(daily);
+
     const controls = document.createElement("div");
     controls.className = "goalControls";
-    controls.appendChild(chk);
+    controls.appendChild(doneBtn);
     controls.appendChild(del);
 
     const row = document.createElement("div");
     row.className = "goalTop";
-    row.appendChild(label);
+    row.appendChild(header);
     row.appendChild(controls);
 
     wrap.appendChild(row);
@@ -345,7 +359,10 @@ export function renderHistory(ui, state) {
       body.textContent = `Удалена цель: «${text}»`.trim();
     } else if (e.type === "done_goal") {
       const text = e.payload?.text || "";
-      body.textContent = `Сделана цель: «${text}»`.trim();
+      const comment = e.payload?.comment || "";
+      body.textContent = comment
+        ? `Сделана цель: «${text}»\nКомментарий: ${comment}`.trim()
+        : `Сделана цель: «${text}»`.trim();
     } else if (e.type === "save") {
       const p = e.payload || {};
       const parts = [];
@@ -374,5 +391,6 @@ export function scrollHistoryToDay(ui, key) {
   const target = entries[0];
   target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
 
 
