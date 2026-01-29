@@ -125,6 +125,18 @@
       </div>
     </div>
 
+    <div class="modalBackdrop" id="saveModal" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="saveTitle">
+        <h3 id="saveTitle">Сохранение записи</h3>
+        <p class="muted" id="saveMessage">—</p>
+        <div class="modalTaskList" id="saveTaskList"></div>
+        <div class="row">
+          <button class="btn purple" id="saveConfirmBtn">Ок</button>
+          <button class="btn" id="saveCancelBtn">Отмена</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- libs -->
@@ -134,5 +146,6 @@
   <script type="module" src="./js/app.js"></script>
 </body>
 </html>
+
 
 
