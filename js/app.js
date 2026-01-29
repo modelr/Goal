@@ -32,7 +32,7 @@ async function boot() {
   const init = await loadInitialState({ supabase });
   state = normalizeState(init.state);
   user = init.user;
-  if (ui.btnLogin) ui.btnLogin.textContent = user ? "🚪 Выйти" : "🔐 Войти";
+  syncLoginButtonLabel();
   mode = init.mode;
   hasPendingSync = false;
 
@@ -50,7 +50,8 @@ async function boot() {
   if (supabase) {
     supabase.auth.onAuthStateChange(async (_event, session) => {
       user = session?.user || null;
-	  if (ui.btnLogin) ui.btnLogin.textContent = user ? "🚪 Выйти" : "🔐 Войти";
+      setLoginLoading(false);
+      syncLoginButtonLabel();
       const init2 = await loadInitialState({ supabase });
       state = normalizeState(init2.state);
       mode = init2.mode;
@@ -180,27 +181,36 @@ function wireEvents() {
   });
 
   ui.btnLogin.addEventListener("click", async () => {
-  if (!supabase) return toast(ui, "Supabase не настроен (URL/KEY)");
+    if (!supabase) return toast(ui, "Supabase не настроен (URL/KEY)");
 
-  // Если уже залогинен — делаем "Выйти"
-  const { data } = await supabase.auth.getUser();
-  if (data?.user) {
-    await supabase.auth.signOut();
-    return;
-  }
+    const isLoggedIn = ui.btnLogin.textContent.includes("Выйти");
+    setLoginLoading(true, isLoggedIn ? "⏳ Выходим…" : "⏳ Входим…");
 
-  // Чистим URL от старых #error...
-  history.replaceState(null, "", window.location.origin + window.location.pathname);
+    // Если уже залогинен — делаем "Выйти"
+    const { data } = await supabase.auth.getUser();
+    if (data?.user) {
+      await supabase.auth.signOut();
+      setLoginLoading(false);
+      syncLoginButtonLabel();
+      return;
+    }
 
-  const redirectTo = window.location.origin + window.location.pathname;
+    // Чистим URL от старых #error...
+    history.replaceState(null, "", window.location.origin + window.location.pathname);
 
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: { redirectTo },
+    const redirectTo = window.location.origin + window.location.pathname;
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo },
+    });
+
+    if (error) {
+      setLoginLoading(false);
+      syncLoginButtonLabel();
+      toast(ui, "Ошибка входа: " + (error.message || String(error)));
+    }
   });
-
-  if (error) toast(ui, "Ошибка входа: " + (error.message || String(error)));
-});
 
 
     // auth modal: close button
@@ -513,7 +523,26 @@ function saveTheme(theme) {
   try { localStorage.setItem(THEME_KEY, theme); } catch {}
 }
 
+function syncLoginButtonLabel() {
+  if (!ui.btnLogin) return;
+  ui.btnLogin.textContent = user ? "🚪 Выйти" : "🔐 Войти";
+  ui.btnLogin.dataset.label = ui.btnLogin.textContent;
+}
 
+function setLoginLoading(isLoading, label) {
+  if (!ui.btnLogin) return;
+  if (isLoading) {
+    if (!ui.btnLogin.dataset.label) {
+      ui.btnLogin.dataset.label = ui.btnLogin.textContent;
+    }
+    ui.btnLogin.classList.add("is-loading");
+    ui.btnLogin.disabled = true;
+    ui.btnLogin.setAttribute("aria-busy", "true");
+    ui.btnLogin.textContent = label || "⏳ Входим…";
+    return;
+  }
 
-
-
+  ui.btnLogin.classList.remove("is-loading");
+  ui.btnLogin.disabled = false;
+  ui.btnLogin.removeAttribute("aria-busy");
+}
