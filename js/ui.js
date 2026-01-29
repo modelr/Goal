@@ -1,4 +1,4 @@
-import { computeProgress, computeStreak, dayKey, lastActionAt } from "./state.js";
+import { computeStreak, dayKey, lastActionAt } from "./state.js";
 
 export function bindUI() {
   const el = (id) => document.getElementById(id);
@@ -24,11 +24,7 @@ export function bindUI() {
     goalsList: el("goalsList"),
     todayNote: el("todayNote"),
     btnSave: el("btnSave"),
-    btnClearAll: el("btnClearAll"),
     modeInfo: el("modeInfo"),
-
-    progressBar: el("progressBar"),
-    progressText: el("progressText"),
 
     streakCount: el("streakCount"),
     todayBadge: el("todayBadge"),
@@ -108,7 +104,6 @@ export function renderAll(ui, state) {
   renderStake(ui, state);
   renderGoals(ui, state);
   renderTodayNote(ui, state);
-  renderProgress(ui, state);
   renderStreak(ui, state);
   renderHistory(ui, state);
   requestAnimationFrame(() => syncHistoryHeight(ui));
@@ -269,12 +264,6 @@ export function renderTodayNote(ui, state) {
   ui.todayNote.value = state.todayNote || "";
 }
 
-export function renderProgress(ui, state) {
-  const p = computeProgress(state);
-  ui.progressText.textContent = `${p.done}/${p.total} • ${p.pct}%`;
-  ui.progressBar.style.width = `${p.pct}%`;
-}
-
 export function renderStreak(ui, state) {
   const s = computeStreak(state.history);
   ui.streakCount.textContent = String(s.streak);
@@ -344,4 +333,5 @@ export function renderHistory(ui, state) {
     ui.history.appendChild(card);
   }
 }
+
 
