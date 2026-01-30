@@ -2,7 +2,7 @@ import { createSupabaseClient } from "./supabaseClient.js";
 import {
   defaultState, normalizeState, addGoal, deleteGoal,
   addHistorySave, markOpened, completeGoal,
-  computeStreak, lastActionAt
+  computeStreak, lastActionAt, deleteHistoryEntry
 } from "./state.js";
 import {
   getDeviceId,
@@ -388,6 +388,19 @@ function wireEvents() {
       if (!cell?.dataset?.dayKey) return;
       e.preventDefault();
       scrollHistoryToDay(ui, cell.dataset.dayKey);
+    });
+  }
+
+  if (ui.history) {
+    ui.history.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-role='historyDelete']");
+      if (!btn) return;
+      const key = btn.dataset.historyKey;
+      if (!key) return;
+      state = deleteHistoryEntry(state, key);
+      state = markOpened(state);
+      renderAll(ui, state);
+      scheduleSave();
     });
   }
 
@@ -1070,6 +1083,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
