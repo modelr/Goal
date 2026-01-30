@@ -163,6 +163,10 @@ h2{
   flex: 1 1 0;
   justify-content:center;
 }
+.row.dataChoiceActions{
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
 .goalsActions{
   justify-content:flex-start;
   gap:12px;
@@ -237,6 +241,31 @@ textarea{
   border-right-color: transparent;
   display: inline-block;
   animation: btnSpinner 0.8s linear infinite;
+}
+
+.btn.ghost{
+  background: transparent;
+}
+
+.authStageBar{
+  margin: 12px 0 18px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.18);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+[data-theme="light"] .authStageBar{
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.authStageText{
+  font-weight: 600;
 }
 
 @keyframes btnSpinner{
@@ -643,6 +672,44 @@ button.pill.btn { cursor: pointer; }
   color: var(--text);
 }
 
+.modalWide{
+  width: min(680px, 100%);
+}
+
+.diffSummary{
+  margin-top: 14px;
+}
+
+.diffListWrap{
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.diffSection{
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.16);
+}
+
+[data-theme="light"] .diffSection{
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.diffTitle{
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.diffList{
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 4px;
+}
+
 .taskOption{
   display: flex;
   align-items: center;
@@ -659,6 +726,7 @@ button.pill.btn { cursor: pointer; }
 .taskOption input{
   margin: 0;
 }
+
 
 
 
