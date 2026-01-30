@@ -37,17 +37,22 @@ let user = null;
 let mode = "guest";
 let saving = false;
 let hasPendingSync = false;
+let cloudReady = false;
+let lastCloudSaveOk = null;
 let offlineModalShown = false;
 let saveModalConfirmHandler = null;
 let commentModalGoalId = null;
 let dataChoiceResolve = null;
 const THEME_KEY = "goal-theme";
 const AUTH_TIMEOUT_MS = 9000;
+const AUTH_STATUS_HIDE_DELAY_MS = 2200;
+const SYNC_TOAST_THROTTLE_MS = 8000;
 let authListenerAttached = false;
 let authFlowInProgress = false;
 let dataChoicePending = false;
-let pendingAuthRetry = null;
 let authStageTimer = null;
+let authInitTimedOut = false;
+let lastSyncToastAt = 0;
 const deviceId = getDeviceId();
 
 boot().catch(err => hardFail(err));
@@ -57,7 +62,7 @@ async function boot() {
   applyTheme(loadTheme());
   setLoginLoading(false);
 
-  await runInitialLoad({ reason: "boot" });
+  await runAuthInit({ reason: "boot" });
 
   updateNetBadge();
   window.addEventListener("online", () => updateNetBadge());
@@ -74,7 +79,7 @@ async function boot() {
       user = session?.user || null;
       setLoginLoading(false);
       syncLoginButtonLabel();
-      await runInitialLoad({ reason: "auth-change" });
+      await runAuthInit({ reason: "auth-change" });
       toast(ui, user ? "Вошли, данные синхронизированы" : "Вышли, гостевой режим");
     });
   }
@@ -96,7 +101,7 @@ async function handleAuthRedirect() {
 
   logAuthStage("Обрабатываем вход (redirect)…");
   setAuthStage(ui, { text: "Обрабатываем вход (redirect)…", visible: true });
-  startAuthTimeout(() => runInitialLoad({ reason: "retry-redirect" }));
+  startAuthTimeout();
   const { error } = await supabase.auth.setSession({
     access_token: accessToken,
     refresh_token: refreshToken,
@@ -111,104 +116,119 @@ async function handleAuthRedirect() {
   return true;
 }
 
-async function runInitialLoad({ reason }) {
-  if (authFlowInProgress) return;
+async function runAuthInit({ force = false, reason = "" } = {}) {
+  if (authFlowInProgress && !force) return;
+  if (force) resetAuthInitState();
   authFlowInProgress = true;
+  authInitTimedOut = false;
+  cloudReady = false;
+  lastCloudSaveOk = null;
   dataChoicePending = false;
   hideDataChoiceModal(ui);
   logAuthStage(`Запуск загрузки (${reason})`);
 
-  setAuthStage(ui, { text: "Проверяем сессию…", visible: true });
-  startAuthTimeout(() => runInitialLoad({ reason: "retry-session" }));
+  setAuthStage(ui, { text: "Проверяем сессию…", visible: true, showRetry: false });
+  updateNetBadge();
+  startAuthTimeout();
 
-  await handleAuthRedirect();
-  const sessionUser = await getUserSafe();
-  user = sessionUser;
-  syncLoginButtonLabel();
-  clearAuthTimeout();
+  try {
+    await handleAuthRedirect();
+    const sessionUser = await getUserSafe();
+    user = sessionUser;
+    syncLoginButtonLabel();
+    clearAuthTimeout();
 
-  setAuthStage(ui, { text: "Загружаем данные…", visible: true });
-  startAuthTimeout(() => runInitialLoad({ reason: "retry-data" }));
+    setAuthStage(ui, { text: "Загружаем данные…", visible: true, showRetry: false });
 
-  const guestRaw = loadGuestState(deviceId);
-  const guestState = guestRaw ? normalizeState(guestRaw) : null;
+    const guestRaw = loadGuestState(deviceId);
+    const guestState = guestRaw ? normalizeState(guestRaw) : null;
 
-  let cloudState = null;
-  let userLocalState = null;
-  if (user) {
-    const remote = await loadRemoteState(supabase, user.id);
-    cloudState = remote?.state ? normalizeState(remote.state) : null;
-    const localRaw = loadUserStateLocal(user.id);
-    userLocalState = localRaw ? normalizeState(localRaw) : null;
-  }
+    let cloudState = null;
+    let userLocalState = null;
+    if (user) {
+      const remote = await loadRemoteState(supabase, user.id);
+      cloudState = remote?.state ? normalizeState(remote.state) : null;
+      const localRaw = loadUserStateLocal(user.id);
+      userLocalState = localRaw ? normalizeState(localRaw) : null;
+    }
 
-  const effectiveCloud = cloudState || userLocalState;
-  const guestHas = hasMeaningfulState(guestState);
-  const cloudHas = hasMeaningfulState(effectiveCloud);
+    const effectiveCloud = cloudState || userLocalState;
+    const guestHas = hasMeaningfulState(guestState);
+    const cloudHas = hasMeaningfulState(effectiveCloud);
 
-  if (user && guestHas && cloudHas && !statesEqual(guestState, effectiveCloud)) {
-    dataChoicePending = true;
-    const diffSections = buildDiffSummary(guestState, effectiveCloud);
-    renderDiffList(ui, diffSections);
-    showDataChoiceModal(ui);
+    if (user && guestHas && cloudHas && !statesEqual(guestState, effectiveCloud)) {
+      dataChoicePending = true;
+      const diffSections = buildDiffSummary(guestState, effectiveCloud);
+      renderDiffList(ui, diffSections);
+      showDataChoiceModal(ui);
 
-    state = markOpened(normalizeState(guestState));
-    mode = "remote";
+      state = markOpened(normalizeState(guestState));
+      mode = "remote";
+      setModeInfo(ui, mode, user);
+      updateNetBadge();
+      renderAll(ui, state);
+      scrollToTop();
+
+      const choice = await waitForDataChoice();
+      hideDataChoiceModal(ui);
+      dataChoicePending = false;
+
+      if (choice === "cloud") {
+        if (guestState) {
+          backupState("guest", guestState);
+          const updatedGuest = {
+            ...guestState,
+            lastConflictResolvedAt: Date.now(),
+            lastConflictChoice: "cloud",
+          };
+          saveGuestState(deviceId, updatedGuest, { skipGuard: true });
+        }
+        state = markOpened(normalizeState(effectiveCloud));
+        saveUserStateLocal(user.id, state, { skipGuard: true });
+      hasPendingSync = false;
+      toast(ui, "Оставляем облачные данные");
+    } else if (choice === "local") {
+        if (effectiveCloud) {
+          backupState("cloud", effectiveCloud);
+        }
+        state = markOpened(normalizeState(guestState));
+        saveUserStateLocal(user.id, state, { skipGuard: true });
+        const res = await saveRemoteState(supabase, user.id, state, { skipGuard: true });
+      hasPendingSync = !res.ok;
+      lastCloudSaveOk = res.ok;
+        if (!res.ok) showOfflineNotice("Мы оффлайн, данные не сохранятся.");
+        toast(ui, "Оставляем локальные данные");
+      }
+    } else {
+      const finalState = cloudHas
+        ? effectiveCloud
+        : guestHas
+          ? guestState
+          : defaultState();
+      state = markOpened(normalizeState(finalState));
+      mode = user ? "remote" : "guest";
+      if (!user) hasPendingSync = false;
+    }
+
+    cloudReady = !!user;
+    offlineModalShown = false;
     setModeInfo(ui, mode, user);
     updateNetBadge();
     renderAll(ui, state);
     scrollToTop();
 
-    const choice = await waitForDataChoice();
-    hideDataChoiceModal(ui);
-    dataChoicePending = false;
-
-    if (choice === "cloud") {
-      if (guestState) {
-        backupState("guest", guestState);
-        const updatedGuest = {
-          ...guestState,
-          lastConflictResolvedAt: Date.now(),
-          lastConflictChoice: "cloud",
-        };
-        saveGuestState(deviceId, updatedGuest, { skipGuard: true });
-      }
-      state = markOpened(normalizeState(effectiveCloud));
-      saveUserStateLocal(user.id, state, { skipGuard: true });
-      hasPendingSync = false;
-      toast(ui, "Оставляем облачные данные");
-    } else if (choice === "local") {
-      if (effectiveCloud) {
-        backupState("cloud", effectiveCloud);
-      }
-      state = markOpened(normalizeState(guestState));
-      saveUserStateLocal(user.id, state, { skipGuard: true });
-      const res = await saveRemoteState(supabase, user.id, state, { skipGuard: true });
-      hasPendingSync = !res.ok;
-      if (!res.ok) showOfflineNotice("Мы оффлайн, данные не сохранятся.");
-      toast(ui, "Оставляем локальные данные");
-    }
-  } else {
-    const finalState = cloudHas
-      ? effectiveCloud
-      : guestHas
-        ? guestState
-        : defaultState();
-    state = markOpened(normalizeState(finalState));
-    mode = user ? "remote" : "guest";
-    hasPendingSync = false;
+    setAuthStage(ui, { text: "Загружено", visible: true, showRetry: false });
+    setTimeout(() => setAuthStage(ui, { text: "Загружено", visible: false }), AUTH_STATUS_HIDE_DELAY_MS);
+  } catch (err) {
+    console.error(err);
+    cloudReady = false;
+    lastCloudSaveOk = false;
+    setAuthStage(ui, { text: "Кажется, вход завис. Повторить?", visible: true, showRetry: true });
+    updateNetBadge();
+  } finally {
+    clearAuthTimeout();
+    authFlowInProgress = false;
   }
-
-  clearAuthTimeout();
-  offlineModalShown = false;
-  setModeInfo(ui, mode, user);
-  updateNetBadge();
-  renderAll(ui, state);
-  scrollToTop();
-
-  setAuthStage(ui, { text: "Готово", visible: true, showRetry: false });
-  setTimeout(() => setAuthStage(ui, { text: "Готово", visible: false }), 1600);
-  authFlowInProgress = false;
 }
 
 function waitForDataChoice() {
@@ -217,11 +237,13 @@ function waitForDataChoice() {
   });
 }
 
-function startAuthTimeout(onRetry) {
+function startAuthTimeout() {
   clearAuthTimeout();
-  pendingAuthRetry = onRetry;
   authStageTimer = setTimeout(() => {
+    authInitTimedOut = true;
+    cloudReady = false;
     setAuthStage(ui, { text: "Кажется, вход завис. Повторить?", visible: true, showRetry: true });
+    updateNetBadge();
   }, AUTH_TIMEOUT_MS);
 }
 
@@ -230,7 +252,12 @@ function clearAuthTimeout() {
     clearTimeout(authStageTimer);
     authStageTimer = null;
   }
-  pendingAuthRetry = null;
+}
+
+function resetAuthInitState() {
+  clearAuthTimeout();
+  authFlowInProgress = false;
+  authInitTimedOut = false;
 }
 
 async function getUserSafe() {
@@ -245,11 +272,11 @@ async function getUserSafe() {
 }
 
 function wireEvents() {
-  if (ui.authRetryBtn) {
-    ui.authRetryBtn.addEventListener("click", () => {
-      if (pendingAuthRetry) {
-        pendingAuthRetry();
-      }
+  if (ui.authStatusBtn) {
+    ui.authStatusBtn.addEventListener("click", () => {
+      if (ui.authStatusBtn.dataset.retry !== "true") return;
+      setAuthStage(ui, { text: "Проверяем сессию…", visible: true, showRetry: false });
+      runAuthInit({ force: true, reason: "manual-retry-authStatusBtn" });
     });
   }
 
@@ -566,7 +593,14 @@ function finalizeSaveEntry({ focusGoal }) {
   state = markOpened(state);
   renderAll(ui, state);
   markPendingSync();
-  persist().then(() => toast(ui, "Сохранено"));
+  persist().then((res) => {
+    if (!res?.ok) return;
+    if (res.mode === "guest") {
+      toast(ui, "Сохранено локально");
+      return;
+    }
+    toast(ui, "Сохранено");
+  });
 }
 
 function getActiveGoals(s) {
@@ -658,7 +692,7 @@ function renderSaveTasks(tasks, showTasks) {
 
 let saveTimer = null;
 function scheduleSave() {
-  if (dataChoicePending || authFlowInProgress) {
+  if (dataChoicePending || (authFlowInProgress && !authInitTimedOut)) {
     debug("Save skipped: awaiting auth/data choice");
     return;
   }
@@ -669,30 +703,42 @@ function scheduleSave() {
 
 async function persist() {
   if (saving) return;
-  if (dataChoicePending || authFlowInProgress) return;
+  if (dataChoicePending || (authFlowInProgress && !authInitTimedOut)) return;
   saving = true;
   if (!user) {
     saveGuestState(deviceId, state);
     setModeInfo(ui, "guest", user);
     hasPendingSync = false;
+    lastCloudSaveOk = null;
     updateNetBadge();
     saving = false;
     return { ok: true, mode: "guest" };
   }
 
   saveUserStateLocal(user.id, state);
+  if (!cloudReady) {
+    hasPendingSync = true;
+    lastCloudSaveOk = null;
+    updateNetBadge();
+    showSyncToastOnce("Сессия не подтверждена, изменения не синхронизированы. Нажмите “Повторить”.");
+    saving = false;
+    return { ok: false, mode: "local", reason: "cloud-not-ready" };
+  }
   const res = await saveRemoteState(supabase, user.id, state);
   mode = "remote";
   setModeInfo(ui, mode, user);
   if (res.ok) {
     hasPendingSync = false;
+    lastCloudSaveOk = true;
   } else {
     hasPendingSync = true;
+    lastCloudSaveOk = false;
     showOfflineNotice("Мы оффлайн, данные не сохранятся.");
+    showSyncToastOnce("Ошибка синхронизации, изменения не сохранены.");
   }
   updateNetBadge();
   saving = false;
-  return res;
+  return { ...res, mode: "remote" };
 }
 
 function safeCreateSupabase() {
@@ -716,9 +762,6 @@ function installGuards() {
 
 function logAuthStage(message) {
   console.log(`[auth] ${message}`);
-  if (ui.authStageText) {
-    ui.authStageText.textContent = message;
-  }
 }
 
 function debug(msg, obj) {
@@ -733,6 +776,9 @@ function debug(msg, obj) {
 function markPendingSync() {
   if (!user) return;
   hasPendingSync = true;
+  if (!cloudReady) {
+    showSyncToastOnce("Сессия не подтверждена, изменения не синхронизированы. Нажмите “Повторить”.");
+  }
   updateNetBadge();
 }
 
@@ -740,6 +786,8 @@ function updateNetBadge() {
   setOnlineBadge(ui, {
     isOnline: navigator.onLine,
     user,
+    cloudReady,
+    lastCloudSaveOk,
     hasPendingSync
   });
 }
@@ -750,6 +798,13 @@ function showOfflineNotice(message) {
   ui.offlineModal.hidden = false;
   ui.offlineModal.classList.add("show");
   offlineModalShown = true;
+}
+
+function showSyncToastOnce(message) {
+  const now = Date.now();
+  if (now - lastSyncToastAt < SYNC_TOAST_THROTTLE_MS) return;
+  lastSyncToastAt = now;
+  toast(ui, message, 3500);
 }
 
 function hardFail(err) {
@@ -1018,6 +1073,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
