@@ -266,7 +266,7 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
       setAuthStage(ui, { text: "Загружено", visible: true, showRetry: false });
       setTimeout(() => setAuthStage(ui, { text: "Загружено", visible: false }), AUTH_STATUS_HIDE_DELAY_MS);
     } else {
-      setAuthStage(ui, { text: "Требуется вход", visible: true, showRetry: false });
+      setAuthStage(ui, { text: "Локально", visible: true, showRetry: false });
     }
   } catch (err) {
     console.error(err);
@@ -447,7 +447,7 @@ function wireEvents() {
       await supabase.auth.signOut();
       setLoginLoading(false);
       syncLoginButtonLabel();
-      setAuthStage(ui, { text: "Требуется вход", visible: true });
+      setAuthStage(ui, { text: "Локально", visible: true });
       return;
     }
 
@@ -1131,6 +1131,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
