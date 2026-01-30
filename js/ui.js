@@ -32,6 +32,9 @@ export function bindUI() {
     toast: el("toast"),
 	
 	authStatus: el("authStatus"),
+    authStageBar: el("authStageBar"),
+    authStageText: el("authStageText"),
+    authRetryBtn: el("authRetryBtn"),
     offlineModal: el("offlineModal"),
     offlineMessage: el("offlineMessage"),
     offlineOkBtn: el("offlineOkBtn"),
@@ -45,6 +48,10 @@ export function bindUI() {
     commentInput: el("commentInput"),
     commentSaveBtn: el("commentSaveBtn"),
     commentCancelBtn: el("commentCancelBtn"),
+    dataChoiceModal: el("dataChoiceModal"),
+    dataChoiceCloudBtn: el("dataChoiceCloudBtn"),
+    dataChoiceLocalBtn: el("dataChoiceLocalBtn"),
+    dataChoiceList: el("dataChoiceList"),
 
   };
 }
@@ -98,8 +105,72 @@ export function setModeInfo(ui, mode, user) {
     ui.modeInfo.textContent = `Облачный режим (Supabase). Пользователь: ${user.email || user.id}`;
     return;
   }
-  ui.modeInfo.textContent = "Войдите, чтобы данные сохранялись в облаке.";
+  ui.modeInfo.textContent = mode === "guest"
+    ? "Гостевой режим (данные привязаны к браузеру)."
+    : "Войдите, чтобы данные сохранялись в облаке.";
 }
+
+export function setAuthStage(ui, { text, showRetry = false, visible = true } = {}) {
+  if (!ui.authStageBar || !ui.authStageText) return;
+  ui.authStageText.textContent = text || "—";
+  ui.authStageBar.hidden = !visible;
+  if (ui.authRetryBtn) {
+    ui.authRetryBtn.hidden = !showRetry;
+  }
+}
+
+export function renderDiffList(ui, sections = []) {
+  if (!ui.dataChoiceList) return;
+  ui.dataChoiceList.innerHTML = "";
+  if (!sections.length) {
+    const empty = document.createElement("div");
+    empty.className = "muted small";
+    empty.textContent = "Отличий не найдено.";
+    ui.dataChoiceList.appendChild(empty);
+    return;
+  }
+
+  sections.forEach((section) => {
+    const wrap = document.createElement("div");
+    wrap.className = "diffSection";
+
+    const title = document.createElement("div");
+    title.className = "diffTitle";
+    title.textContent = section.title || "—";
+    wrap.appendChild(title);
+
+    const list = document.createElement("ul");
+    list.className = "diffList";
+    if (!section.items?.length) {
+      const li = document.createElement("li");
+      li.className = "muted small";
+      li.textContent = "Нет отличий.";
+      list.appendChild(li);
+    } else {
+      section.items.forEach((item) => {
+        const li = document.createElement("li");
+        li.textContent = item;
+        list.appendChild(li);
+      });
+    }
+
+    wrap.appendChild(list);
+    ui.dataChoiceList.appendChild(wrap);
+  });
+}
+
+export function showDataChoiceModal(ui) {
+  if (!ui.dataChoiceModal) return;
+  ui.dataChoiceModal.hidden = false;
+  ui.dataChoiceModal.classList.add("show");
+}
+
+export function hideDataChoiceModal(ui) {
+  if (!ui.dataChoiceModal) return;
+  ui.dataChoiceModal.classList.remove("show");
+  ui.dataChoiceModal.hidden = true;
+}
+
 
 export function renderAll(ui, state) {
   renderMeta(ui, state);
@@ -393,6 +464,7 @@ export function scrollHistoryToDay(ui, key) {
   const target = entries[0];
   target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
 
 
 
