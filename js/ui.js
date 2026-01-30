@@ -1,4 +1,4 @@
-import { computeStreak, dayKey, lastActionAt } from "./state.js";
+import { computeStreak, dayKey, historyKey, lastActionAt } from "./state.js";
 
 export function bindUI() {
   const el = (id) => document.getElementById(id);
@@ -27,6 +27,7 @@ export function bindUI() {
     streakCount: el("streakCount"),
     todayBadge: el("todayBadge"),
     calendar: el("calendar"),
+    historyDoneCount: el("historyDoneCount"),
     history: el("history"),
 
     toast: el("toast"),
@@ -368,6 +369,8 @@ export function renderStreak(ui, state) {
 
 export function renderHistory(ui, state) {
   ui.history.innerHTML = "";
+  const doneCount = state.history.filter(entry => entry?.type === "done_goal").length;
+  if (ui.historyDoneCount) ui.historyDoneCount.textContent = String(doneCount);
 
   if (!state.history.length) {
     const p = document.createElement("div");
@@ -378,6 +381,22 @@ export function renderHistory(ui, state) {
   }
 
   const groups = new Map();
+  const todayKey = dayKey(Date.now());
+  const addLine = (body, prefix, text) => {
+    const line = document.createElement("div");
+    line.className = "histLine";
+    const prefixSpan = document.createElement("span");
+    prefixSpan.className = "histPrefix";
+    prefixSpan.textContent = prefix;
+    line.appendChild(prefixSpan);
+    if (text) {
+      const textSpan = document.createElement("span");
+      textSpan.className = "histText";
+      textSpan.textContent = text;
+      line.appendChild(textSpan);
+    }
+    body.appendChild(line);
+  };
 
   for (const e of state.history) {
     const key = dayKey(e.ts);
@@ -407,6 +426,7 @@ export function renderHistory(ui, state) {
     const card = document.createElement("div");
     card.className = "histCard";
     card.dataset.dayKey = key;
+    card.dataset.historyKey = historyKey(e);
 
     const dt = new Date(e.ts);
     const h = document.createElement("div");
@@ -418,26 +438,37 @@ export function renderHistory(ui, state) {
 
     if (e.type === "delete_goal") {
       const text = e.payload?.text || "";
-      body.textContent = `Удалена цель: «${text}»`.trim();
+      addLine(body, "Удалена цель:", `«${text}»`);
     } else if (e.type === "done_goal") {
       const text = e.payload?.text || "";
       const comment = e.payload?.comment || "";
       const label = e.payload?.isDaily ? "Сделана ежедневная цель" : "Сделана цель";
-      body.textContent = comment
-        ? `${label}: «${text}»\nКомментарий: ${comment}`.trim()
-        : `${label}: «${text}»`.trim();
+      addLine(body, `${label}:`, `«${text}»`);
+      if (comment) {
+        addLine(body, "Комментарий:", comment);
+      }
     } else if (e.type === "save") {
       const p = e.payload || {};
-      const parts = [];
       if (p.focusGoal) {
-        parts.push(`Задача: ${p.focusGoal}`);
+        addLine(body, "Задача:", p.focusGoal);
       }
       if (p.note) {
-        parts.push(`Сделано сегодня: "${p.note}"`);
+        addLine(body, "Сделано сегодня:", p.note);
       }
-      body.textContent = parts.join("\n");
     } else {
       body.textContent = JSON.stringify(e, null, 2);
+    }
+
+    if (key === todayKey) {
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "histDelete";
+      deleteBtn.type = "button";
+      deleteBtn.dataset.role = "historyDelete";
+      deleteBtn.dataset.historyKey = historyKey(e);
+      deleteBtn.setAttribute("aria-label", "Удалить запись");
+      deleteBtn.title = "Удалить запись";
+      deleteBtn.textContent = "✕";
+      card.appendChild(deleteBtn);
     }
 
     card.appendChild(h);
@@ -454,6 +485,7 @@ export function scrollHistoryToDay(ui, key) {
   const target = entries[0];
   target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
 
 
 
