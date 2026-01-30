@@ -174,9 +174,6 @@ h2{
 .goalsMeta{
   margin-top: 8px;
 }
-.goalsProgressLabel{
-  margin-top: 10px;
-}
 
 /* Inputs */
 .input,
@@ -324,30 +321,6 @@ textarea{
 #netBadge svg{
   width:14px;
   height:14px;
-}
-
-/* Progress bar */
-.progress,
-.bar{
-  height: 10px;
-  background: rgba(255,255,255,.08);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  overflow:hidden;
-}
-.bar > div,
-.bar .fill,
-.bar #barFill{
-  height:100%;
-  width:0%;
-  background: linear-gradient(90deg, rgba(124,58,237,1), rgba(34,197,94,1));
-  transition: width .25s ease;
-}
-
-[data-theme="light"] .bar > div,
-[data-theme="light"] .bar .fill,
-[data-theme="light"] .bar #barFill{
-  background: linear-gradient(90deg, rgba(249,115,22,1), rgba(251,191,36,1));
 }
 
 /* Two-column buttons */
@@ -711,6 +684,7 @@ button.pill.btn { cursor: pointer; }
 .taskOption input{
   margin: 0;
 }
+
 
 
 
