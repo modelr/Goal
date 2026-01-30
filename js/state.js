@@ -45,6 +45,25 @@ export function uid() {
   return Math.random().toString(16).slice(2) + "-" + Date.now().toString(16);
 }
 
+export function historyKey(entry) {
+  const payload = entry?.payload || {};
+  return [
+    entry?.ts || "",
+    entry?.type || "",
+    payload.goalId || "",
+    payload.text || "",
+    payload.note || "",
+  ].join("|");
+}
+
+export function deleteHistoryEntry(s, key) {
+  const history = Array.isArray(s?.history) ? [...s.history] : [];
+  const index = history.findIndex(entry => historyKey(entry) === key);
+  if (index === -1) return s;
+  history.splice(index, 1);
+  return { ...s, history };
+}
+
 export function lastActionAt(s) {
   const history = Array.isArray(s?.history) ? s.history : [];
   if (history.length === 0) return s?.lastOpenAt || nowMs();
@@ -162,6 +181,7 @@ export function computeStreak(history) {
 
   return { streak, todayCounted };
 }
+
 
 
 
