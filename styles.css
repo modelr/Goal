@@ -247,25 +247,10 @@ textarea{
   background: transparent;
 }
 
-.authStageBar{
-  margin: 12px 0 18px;
-  padding: 10px 14px;
-  border-radius: 14px;
-  border: 1px solid var(--line);
-  background: rgba(0, 0, 0, 0.18);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  justify-content: space-between;
-  font-size: 13px;
-}
-
-[data-theme="light"] .authStageBar{
-  background: rgba(255, 255, 255, 0.7);
-}
-
-.authStageText{
-  font-weight: 600;
+#authStatusBtn{
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 @keyframes btnSpinner{
@@ -726,6 +711,7 @@ button.pill.btn { cursor: pointer; }
 .taskOption input{
   margin: 0;
 }
+
 
 
 
