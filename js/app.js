@@ -45,7 +45,7 @@ let saveModalConfirmHandler = null;
 let commentModalGoalId = null;
 let dataChoiceResolve = null;
 const THEME_KEY = "goal-theme";
-const AUTH_TIMEOUT_MS = 9000;
+const AUTH_TIMEOUT_MS = 18000;
 const AUTH_STATUS_HIDE_DELAY_MS = 2200;
 const SYNC_TOAST_THROTTLE_MS = 8000;
 let authListenerAttached = false;
@@ -91,6 +91,32 @@ async function boot() {
 
 async function handleAuthRedirect() {
   if (!supabase) return false;
+  const search = window.location.search || "";
+  if (search) {
+    const query = new URLSearchParams(search);
+    const code = query.get("code");
+    if (code) {
+      logAuthStage("Обрабатываем вход (code)…");
+      setAuthStage(ui, { text: "Обрабатываем вход (code)…", visible: true });
+      startAuthTimeout();
+      if (typeof supabase.auth.exchangeCodeForSession === "function") {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) {
+          toast(ui, "Ошибка входа: " + (error.message || String(error)));
+        }
+      } else if (typeof supabase.auth.getSessionFromUrl === "function") {
+        const { error } = await supabase.auth.getSessionFromUrl({ storeSession: true });
+        if (error) {
+          toast(ui, "Ошибка входа: " + (error.message || String(error)));
+        }
+      } else {
+        toast(ui, "Ошибка входа: метод обмена кода не найден");
+      }
+      history.replaceState(null, "", window.location.origin + window.location.pathname);
+      clearAuthTimeout();
+      return true;
+    }
+  }
   const hash = window.location.hash?.replace(/^#/, "");
   if (!hash) return false;
   const params = new URLSearchParams(hash);
@@ -133,7 +159,9 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
   startAuthTimeout();
 
   try {
+    setAuthStage(ui, { text: "Проверяем redirect…", visible: true, showRetry: false });
     await handleAuthRedirect();
+    setAuthStage(ui, { text: "Получаем пользователя…", visible: true, showRetry: false });
     const sessionUser = await getUserSafe();
     user = sessionUser;
     syncLoginButtonLabel();
@@ -147,6 +175,7 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
     let cloudState = null;
     let userLocalState = null;
     if (user) {
+      setAuthStage(ui, { text: "Читаем облако…", visible: true, showRetry: false });
       const remote = await loadRemoteState(supabase, user.id);
       cloudState = remote?.state ? normalizeState(remote.state) : null;
       const localRaw = loadUserStateLocal(user.id);
@@ -1083,6 +1112,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
