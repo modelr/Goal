@@ -501,6 +501,7 @@ textarea{
   border-radius: 14px;
   padding: 12px;
   background: rgba(255,255,255,.03);
+  position: relative;
 }
 .histDay{
   display:flex;
@@ -521,6 +522,43 @@ textarea{
 .entry b,
 .histTitle{ display:block; margin-bottom:6px; font-weight:700; }
 .histBody{ white-space:pre-wrap; color: var(--muted); }
+.histLine{ display:block; margin-bottom: 4px; }
+.histLine:last-child{ margin-bottom: 0; }
+.histPrefix{
+  display:inline-flex;
+  align-items:center;
+  gap: 6px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-weight: 600;
+  color: var(--accent);
+  background: rgba(124,58,237,.16);
+}
+[data-theme="light"] .histPrefix{
+  background: rgba(249, 115, 22, 0.18);
+}
+.histText{
+  margin-left: 6px;
+  color: var(--muted);
+}
+.histDelete{
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,.06);
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+.histDelete:hover{
+  color: var(--text);
+  border-color: rgba(255,255,255,.2);
+}
 
 @media (max-width: 920px){
   .history{
@@ -684,6 +722,7 @@ button.pill.btn { cursor: pointer; }
 .taskOption input{
   margin: 0;
 }
+
 
 
 
