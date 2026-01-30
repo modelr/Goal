@@ -1005,16 +1005,35 @@ function buildGoalsDiff(local, cloud) {
     const other = cloudMap.get(id);
     const diffs = [];
     if (goal.text !== other.text) {
-      diffs.push(`текст: "${other.text || "—"}" → "${goal.text || "—"}"`);
+      diffs.push({
+        type: "text",
+        label: "текст",
+        from: other.text || "—",
+        to: goal.text || "—",
+      });
     }
     if (!!goal.isDaily !== !!other.isDaily) {
-      diffs.push(`ежедневная: ${other.isDaily ? "да" : "нет"} → ${goal.isDaily ? "да" : "нет"}`);
+      diffs.push({
+        type: "plain",
+        label: "ежедневная",
+        from: other.isDaily ? "да" : "нет",
+        to: goal.isDaily ? "да" : "нет",
+      });
     }
     if (!!goal.doneToday !== !!other.doneToday) {
-      diffs.push(`выполнена сегодня: ${other.doneToday ? "да" : "нет"} → ${goal.doneToday ? "да" : "нет"}`);
+      diffs.push({
+        type: "plain",
+        label: "выполнена сегодня",
+        from: other.doneToday ? "да" : "нет",
+        to: goal.doneToday ? "да" : "нет",
+      });
     }
     if (diffs.length) {
-      changed.push(`Изменено: ${goal.text || other.text || "Цель"} (${diffs.join(", ")})`);
+      changed.push({
+        type: "goal-change",
+        title: `Изменено: ${goal.text || other.text || "Цель"}`,
+        diffs,
+      });
     }
   });
 
@@ -1112,6 +1131,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
