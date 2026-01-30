@@ -1,23 +1,54 @@
 import { createSupabaseClient } from "./supabaseClient.js";
 import {
   defaultState, normalizeState, addGoal, deleteGoal,
-  addHistorySave, markOpened, completeGoal
+  addHistorySave, markOpened, completeGoal,
+  computeProgress, computeStreak, lastActionAt
 } from "./state.js";
-import { loadInitialState, saveState } from "./storage.js";
-import { bindUI, renderAll, startHistorySizer, syncHistoryHeight, toast, setOnlineBadge, setModeInfo, scrollHistoryToDay } from "./ui.js";
+import {
+  getDeviceId,
+  loadGuestState,
+  loadRemoteState,
+  loadUserStateLocal,
+  saveGuestState,
+  saveRemoteState,
+  saveUserStateLocal,
+  backupState
+} from "./storage.js";
+import {
+  bindUI,
+  renderAll,
+  startHistorySizer,
+  syncHistoryHeight,
+  toast,
+  setOnlineBadge,
+  setModeInfo,
+  scrollHistoryToDay,
+  setAuthStage,
+  showDataChoiceModal,
+  hideDataChoiceModal,
+  renderDiffList
+} from "./ui.js";
 import { APP } from "./config.js";
 
 const ui = bindUI();
 const supabase = safeCreateSupabase();
 let state = null;
 let user = null;
-let mode = "local";
+let mode = "guest";
 let saving = false;
 let hasPendingSync = false;
 let offlineModalShown = false;
 let saveModalConfirmHandler = null;
 let commentModalGoalId = null;
+let dataChoiceResolve = null;
 const THEME_KEY = "goal-theme";
+const AUTH_TIMEOUT_MS = 9000;
+let authListenerAttached = false;
+let authFlowInProgress = false;
+let dataChoicePending = false;
+let pendingAuthRetry = null;
+let authStageTimer = null;
+const deviceId = getDeviceId();
 
 boot().catch(err => hardFail(err));
 
@@ -26,44 +57,25 @@ async function boot() {
   applyTheme(loadTheme());
   setLoginLoading(false);
 
-  await handleAuthRedirect();
+  await runInitialLoad({ reason: "boot" });
 
   updateNetBadge();
   window.addEventListener("online", () => updateNetBadge());
   window.addEventListener("offline", () => updateNetBadge());
-  // 1) загрузка состояния (local -> (если залогинен) supabase)
-  const init = await loadInitialState({ supabase });
-  state = normalizeState(init.state);
-  user = init.user;
-  syncLoginButtonLabel();
-  mode = init.mode;
-  hasPendingSync = false;
 
-  setModeInfo(ui, mode, user);
-  updateNetBadge();
-  renderAll(ui, state);
-  scrollToTop();
   startHistorySizer(ui);
   window.addEventListener("resize", () => syncHistoryHeight(ui));
 
   wireEvents();
 
-  // 2) слушаем изменение auth (логин/логаут)
-  if (supabase) {
+  if (supabase && !authListenerAttached) {
+    authListenerAttached = true;
     supabase.auth.onAuthStateChange(async (_event, session) => {
       user = session?.user || null;
       setLoginLoading(false);
       syncLoginButtonLabel();
-      const init2 = await loadInitialState({ supabase });
-      state = normalizeState(init2.state);
-      mode = init2.mode;
-      hasPendingSync = false;
-      offlineModalShown = false;
-      setModeInfo(ui, mode, user);
-      updateNetBadge();
-      renderAll(ui, state);
-      scrollToTop();
-      toast(ui, user ? "Вошли, данные синхронизированы" : "Вышли, офлайн-режим");
+      await runInitialLoad({ reason: "auth-change" });
+      toast(ui, user ? "Вошли, данные синхронизированы" : "Вышли, гостевой режим");
     });
   }
 
@@ -74,14 +86,17 @@ async function boot() {
 }
 
 async function handleAuthRedirect() {
-  if (!supabase) return;
+  if (!supabase) return false;
   const hash = window.location.hash?.replace(/^#/, "");
-  if (!hash) return;
+  if (!hash) return false;
   const params = new URLSearchParams(hash);
   const accessToken = params.get("access_token");
   const refreshToken = params.get("refresh_token");
-  if (!accessToken || !refreshToken) return;
+  if (!accessToken || !refreshToken) return false;
 
+  logAuthStage("Обрабатываем вход (redirect)…");
+  setAuthStage(ui, { text: "Обрабатываем вход (redirect)…", visible: true });
+  startAuthTimeout(() => runInitialLoad({ reason: "retry-redirect" }));
   const { error } = await supabase.auth.setSession({
     access_token: accessToken,
     refresh_token: refreshToken,
@@ -92,9 +107,152 @@ async function handleAuthRedirect() {
   }
 
   history.replaceState(null, "", window.location.origin + window.location.pathname);
+  clearAuthTimeout();
+  return true;
+}
+
+async function runInitialLoad({ reason }) {
+  if (authFlowInProgress) return;
+  authFlowInProgress = true;
+  dataChoicePending = false;
+  hideDataChoiceModal(ui);
+  logAuthStage(`Запуск загрузки (${reason})`);
+
+  setAuthStage(ui, { text: "Проверяем сессию…", visible: true });
+  startAuthTimeout(() => runInitialLoad({ reason: "retry-session" }));
+
+  await handleAuthRedirect();
+  const sessionUser = await getUserSafe();
+  user = sessionUser;
+  syncLoginButtonLabel();
+  clearAuthTimeout();
+
+  setAuthStage(ui, { text: "Загружаем данные…", visible: true });
+  startAuthTimeout(() => runInitialLoad({ reason: "retry-data" }));
+
+  const guestRaw = loadGuestState(deviceId);
+  const guestState = guestRaw ? normalizeState(guestRaw) : null;
+
+  let cloudState = null;
+  let userLocalState = null;
+  if (user) {
+    const remote = await loadRemoteState(supabase, user.id);
+    cloudState = remote?.state ? normalizeState(remote.state) : null;
+    const localRaw = loadUserStateLocal(user.id);
+    userLocalState = localRaw ? normalizeState(localRaw) : null;
+  }
+
+  const effectiveCloud = cloudState || userLocalState;
+  const guestHas = hasMeaningfulState(guestState);
+  const cloudHas = hasMeaningfulState(effectiveCloud);
+
+  if (user && guestHas && cloudHas && !statesEqual(guestState, effectiveCloud)) {
+    dataChoicePending = true;
+    const diffSections = buildDiffSummary(guestState, effectiveCloud);
+    renderDiffList(ui, diffSections);
+    showDataChoiceModal(ui);
+
+    state = markOpened(normalizeState(guestState));
+    mode = "remote";
+    setModeInfo(ui, mode, user);
+    updateNetBadge();
+    renderAll(ui, state);
+    scrollToTop();
+
+    const choice = await waitForDataChoice();
+    hideDataChoiceModal(ui);
+    dataChoicePending = false;
+
+    if (choice === "cloud") {
+      if (guestState) {
+        backupState("guest", guestState);
+        const updatedGuest = {
+          ...guestState,
+          lastConflictResolvedAt: Date.now(),
+          lastConflictChoice: "cloud",
+        };
+        saveGuestState(deviceId, updatedGuest, { skipGuard: true });
+      }
+      state = markOpened(normalizeState(effectiveCloud));
+      saveUserStateLocal(user.id, state, { skipGuard: true });
+      hasPendingSync = false;
+      toast(ui, "Оставляем облачные данные");
+    } else if (choice === "local") {
+      if (effectiveCloud) {
+        backupState("cloud", effectiveCloud);
+      }
+      state = markOpened(normalizeState(guestState));
+      saveUserStateLocal(user.id, state, { skipGuard: true });
+      const res = await saveRemoteState(supabase, user.id, state, { skipGuard: true });
+      hasPendingSync = !res.ok;
+      if (!res.ok) showOfflineNotice("Мы оффлайн, данные не сохранятся.");
+      toast(ui, "Оставляем локальные данные");
+    }
+  } else {
+    const finalState = cloudHas
+      ? effectiveCloud
+      : guestHas
+        ? guestState
+        : defaultState();
+    state = markOpened(normalizeState(finalState));
+    mode = user ? "remote" : "guest";
+    hasPendingSync = false;
+  }
+
+  clearAuthTimeout();
+  offlineModalShown = false;
+  setModeInfo(ui, mode, user);
+  updateNetBadge();
+  renderAll(ui, state);
+  scrollToTop();
+
+  setAuthStage(ui, { text: "Готово", visible: true, showRetry: false });
+  setTimeout(() => setAuthStage(ui, { text: "Готово", visible: false }), 1600);
+  authFlowInProgress = false;
+}
+
+function waitForDataChoice() {
+  return new Promise((resolve) => {
+    dataChoiceResolve = resolve;
+  });
+}
+
+function startAuthTimeout(onRetry) {
+  clearAuthTimeout();
+  pendingAuthRetry = onRetry;
+  authStageTimer = setTimeout(() => {
+    setAuthStage(ui, { text: "Кажется, вход завис. Повторить?", visible: true, showRetry: true });
+  }, AUTH_TIMEOUT_MS);
+}
+
+function clearAuthTimeout() {
+  if (authStageTimer) {
+    clearTimeout(authStageTimer);
+    authStageTimer = null;
+  }
+  pendingAuthRetry = null;
+}
+
+async function getUserSafe() {
+  if (!supabase) return null;
+  try {
+    const { data, error } = await supabase.auth.getUser();
+    if (error) return null;
+    return data?.user || null;
+  } catch {
+    return null;
+  }
 }
 
 function wireEvents() {
+  if (ui.authRetryBtn) {
+    ui.authRetryBtn.addEventListener("click", () => {
+      if (pendingAuthRetry) {
+        pendingAuthRetry();
+      }
+    });
+  }
+
   // stake
   ui.stakeInput.addEventListener("input", () => {
     state.stake.text = ui.stakeInput.value;
@@ -191,6 +349,8 @@ function wireEvents() {
 
     const isLoggedIn = ui.btnLogin.textContent.includes("Выйти");
     setLoginLoading(true, isLoggedIn ? "⏳ Выходим…" : "⏳ Входим…");
+    logAuthStage(isLoggedIn ? "Запрос на выход" : "Запрос на вход");
+    setAuthStage(ui, { text: isLoggedIn ? "Выходим…" : "Входим…", visible: true });
 
     // Если уже залогинен — делаем "Выйти"
     const { data } = await supabase.auth.getUser();
@@ -198,6 +358,7 @@ function wireEvents() {
       await supabase.auth.signOut();
       setLoginLoading(false);
       syncLoginButtonLabel();
+      setAuthStage(ui, { text: "Готово", visible: true });
       return;
     }
 
@@ -271,6 +432,23 @@ function wireEvents() {
     });
   }
 
+  if (ui.dataChoiceCloudBtn) {
+    ui.dataChoiceCloudBtn.addEventListener("click", () => {
+      if (dataChoiceResolve) {
+        dataChoiceResolve("cloud");
+        dataChoiceResolve = null;
+      }
+    });
+  }
+  if (ui.dataChoiceLocalBtn) {
+    ui.dataChoiceLocalBtn.addEventListener("click", () => {
+      if (dataChoiceResolve) {
+        dataChoiceResolve("local");
+        dataChoiceResolve = null;
+      }
+    });
+  }
+
   // auth modal: send magic link
   if (ui.sendLinkBtn && ui.authEmail) {
     ui.sendLinkBtn.addEventListener("click", async () => {
@@ -332,6 +510,14 @@ function wireEvents() {
     ui.commentModal.addEventListener("click", (e) => {
       if (e.target === ui.commentModal) {
         closeCommentModal();
+      }
+    });
+  }
+
+  if (ui.dataChoiceModal) {
+    ui.dataChoiceModal.addEventListener("click", (e) => {
+      if (e.target === ui.dataChoiceModal) {
+        e.preventDefault();
       }
     });
   }
@@ -472,6 +658,10 @@ function renderSaveTasks(tasks, showTasks) {
 
 let saveTimer = null;
 function scheduleSave() {
+  if (dataChoicePending || authFlowInProgress) {
+    debug("Save skipped: awaiting auth/data choice");
+    return;
+  }
   if (saveTimer) clearTimeout(saveTimer);
   markPendingSync();
   saveTimer = setTimeout(() => persist(), 350);
@@ -479,12 +669,24 @@ function scheduleSave() {
 
 async function persist() {
   if (saving) return;
+  if (dataChoicePending || authFlowInProgress) return;
   saving = true;
-  const res = await saveState({ supabase, userId: user?.id || null, state });
-  mode = res.mode === "remote" ? "remote" : mode; // не откатываем UI лишний раз
-  setModeInfo(ui, user ? "remote" : "local", user);
-  if (res.ok && user) hasPendingSync = false;
-  if (!res.ok && user) {
+  if (!user) {
+    saveGuestState(deviceId, state);
+    setModeInfo(ui, "guest", user);
+    hasPendingSync = false;
+    updateNetBadge();
+    saving = false;
+    return { ok: true, mode: "guest" };
+  }
+
+  saveUserStateLocal(user.id, state);
+  const res = await saveRemoteState(supabase, user.id, state);
+  mode = "remote";
+  setModeInfo(ui, mode, user);
+  if (res.ok) {
+    hasPendingSync = false;
+  } else {
     hasPendingSync = true;
     showOfflineNotice("Мы оффлайн, данные не сохранятся.");
   }
@@ -510,6 +712,13 @@ function installGuards() {
   window.onerror = (m, src, line, col) => {
     console.error("[onerror]", m, src, line, col);
   };
+}
+
+function logAuthStage(message) {
+  console.log(`[auth] ${message}`);
+  if (ui.authStageText) {
+    ui.authStageText.textContent = message;
+  }
 }
 
 function debug(msg, obj) {
@@ -569,6 +778,223 @@ function saveTheme(theme) {
   try { localStorage.setItem(THEME_KEY, theme); } catch {}
 }
 
+function hasMeaningfulState(state) {
+  if (!state) return false;
+  if (state?.stake?.text) return true;
+  if (state?.stake?.done) return true;
+  if (Array.isArray(state?.dailyGoals)) {
+    const goalHasData = state.dailyGoals.some(goal =>
+      (goal?.text && String(goal.text).trim()) ||
+      goal?.doneToday ||
+      goal?.isDaily
+    );
+    if (goalHasData) return true;
+  }
+  if (Array.isArray(state?.history) && state.history.length > 0) return true;
+  if (state?.todayNote && String(state.todayNote).trim()) return true;
+  return false;
+}
+
+function normalizeForCompare(state) {
+  if (!state) return null;
+  const normalized = normalizeState(state);
+  const goals = [...normalized.dailyGoals]
+    .map(goal => ({
+      id: goal.id,
+      text: String(goal.text || ""),
+      doneToday: !!goal.doneToday,
+      isDaily: !!goal.isDaily,
+    }))
+    .sort((a, b) => a.id.localeCompare(b.id));
+
+  const history = [...(normalized.history || [])]
+    .map(entry => ({
+      ts: entry.ts,
+      type: entry.type,
+      payload: sanitizePayload(entry.payload),
+    }))
+    .sort((a, b) => (a.ts || 0) - (b.ts || 0));
+
+  return {
+    stake: {
+      text: String(normalized.stake?.text || ""),
+      done: !!normalized.stake?.done,
+    },
+    dailyGoals: goals,
+    todayNote: String(normalized.todayNote || ""),
+    history,
+  };
+}
+
+function sanitizePayload(payload) {
+  if (!payload || typeof payload !== "object") return payload;
+  const out = {};
+  Object.keys(payload)
+    .sort()
+    .forEach((key) => {
+      if (payload[key] !== undefined) out[key] = payload[key];
+    });
+  return out;
+}
+
+function stableStringify(value) {
+  return JSON.stringify(sortDeep(value));
+}
+
+function sortDeep(value) {
+  if (Array.isArray(value)) return value.map(sortDeep);
+  if (value && typeof value === "object") {
+    return Object.keys(value)
+      .sort()
+      .reduce((acc, key) => {
+        acc[key] = sortDeep(value[key]);
+        return acc;
+      }, {});
+  }
+  return value;
+}
+
+function statesEqual(a, b) {
+  return stableStringify(normalizeForCompare(a)) === stableStringify(normalizeForCompare(b));
+}
+
+function buildDiffSummary(localState, cloudState) {
+  const local = normalizeState(localState);
+  const cloud = normalizeState(cloudState);
+  const sections = [];
+
+  sections.push(buildGoalsDiff(local, cloud));
+  sections.push(buildHistoryDiff(local, cloud));
+  sections.push(buildProgressDiff(local, cloud));
+  sections.push(buildActivityDiff(local, cloud));
+
+  return sections.filter(section => section);
+}
+
+function buildGoalsDiff(local, cloud) {
+  const localMap = new Map(local.dailyGoals.map(goal => [goal.id, goal]));
+  const cloudMap = new Map(cloud.dailyGoals.map(goal => [goal.id, goal]));
+
+  const addedLocal = [];
+  const onlyCloud = [];
+  const changed = [];
+
+  localMap.forEach((goal, id) => {
+    if (!cloudMap.has(id)) {
+      if (goal.text) addedLocal.push(`Добавлено локально: ${goal.text}`);
+      return;
+    }
+    const other = cloudMap.get(id);
+    const diffs = [];
+    if (goal.text !== other.text) {
+      diffs.push(`текст: "${other.text || "—"}" → "${goal.text || "—"}"`);
+    }
+    if (!!goal.isDaily !== !!other.isDaily) {
+      diffs.push(`ежедневная: ${other.isDaily ? "да" : "нет"} → ${goal.isDaily ? "да" : "нет"}`);
+    }
+    if (!!goal.doneToday !== !!other.doneToday) {
+      diffs.push(`выполнена сегодня: ${other.doneToday ? "да" : "нет"} → ${goal.doneToday ? "да" : "нет"}`);
+    }
+    if (diffs.length) {
+      changed.push(`Изменено: ${goal.text || other.text || "Цель"} (${diffs.join(", ")})`);
+    }
+  });
+
+  cloudMap.forEach((goal, id) => {
+    if (!localMap.has(id)) {
+      if (goal.text) onlyCloud.push(`Есть только в облаке: ${goal.text}`);
+    }
+  });
+
+  return {
+    title: "Цели",
+    items: [...addedLocal, ...onlyCloud, ...changed],
+  };
+}
+
+function buildHistoryDiff(local, cloud) {
+  const localHistory = Array.isArray(local.history) ? local.history : [];
+  const cloudHistory = Array.isArray(cloud.history) ? cloud.history : [];
+  const localSet = new Set(localHistory.map(historyKey));
+  const cloudSet = new Set(cloudHistory.map(historyKey));
+
+  const onlyLocal = localHistory.filter(entry => !cloudSet.has(historyKey(entry)));
+  const onlyCloud = cloudHistory.filter(entry => !localSet.has(historyKey(entry)));
+
+  const items = [
+    `В облаке записей: ${cloudHistory.length}, локально: ${localHistory.length}`,
+  ];
+
+  onlyLocal.slice(0, 5).forEach(entry => {
+    items.push(`Только локально: ${formatHistoryEntry(entry)}`);
+  });
+  onlyCloud.slice(0, 5).forEach(entry => {
+    items.push(`Только в облаке: ${formatHistoryEntry(entry)}`);
+  });
+
+  return {
+    title: "История",
+    items,
+  };
+}
+
+function historyKey(entry) {
+  const payload = entry?.payload || {};
+  return [
+    entry?.ts || "",
+    entry?.type || "",
+    payload.goalId || "",
+    payload.text || "",
+    payload.note || "",
+  ].join("|");
+}
+
+function formatHistoryEntry(entry) {
+  const date = entry?.ts ? new Date(entry.ts).toLocaleString("ru-RU") : "—";
+  const type = entry?.type || "—";
+  const text = entry?.payload?.text || entry?.payload?.note || entry?.payload?.focusGoal || "";
+  return `${date} — ${type}${text ? ` (${text})` : ""}`;
+}
+
+function buildProgressDiff(local, cloud) {
+  const localStreak = computeStreak(local.history || []);
+  const cloudStreak = computeStreak(cloud.history || []);
+  const localProgress = computeProgress(local);
+  const cloudProgress = computeProgress(cloud);
+
+  const items = [];
+  if (localStreak.streak !== cloudStreak.streak || localStreak.todayCounted !== cloudStreak.todayCounted) {
+    items.push(`Streak: облако ${cloudStreak.streak} дней, локально ${localStreak.streak} дней`);
+  }
+  if (
+    localProgress.done !== cloudProgress.done ||
+    localProgress.total !== cloudProgress.total ||
+    localProgress.pct !== cloudProgress.pct
+  ) {
+    items.push(`Прогресс: облако ${cloudProgress.done}/${cloudProgress.total} (${cloudProgress.pct}%), локально ${localProgress.done}/${localProgress.total} (${localProgress.pct}%)`);
+  }
+
+  return {
+    title: "Streak / прогресс",
+    items,
+  };
+}
+
+function buildActivityDiff(local, cloud) {
+  const localLast = lastActionAt(local);
+  const cloudLast = lastActionAt(cloud);
+  const localStr = new Date(localLast).toLocaleString("ru-RU");
+  const cloudStr = new Date(cloudLast).toLocaleString("ru-RU");
+  const items = [];
+  if (localLast !== cloudLast) {
+    items.push(`Последняя активность: облако ${cloudStr}, локально ${localStr}`);
+  }
+  return {
+    title: "Активность",
+    items,
+  };
+}
+
 function syncLoginButtonLabel() {
   if (!ui.btnLogin) return;
   ui.btnLogin.textContent = user ? "🚪 Выйти" : "🔐 Войти";
@@ -592,6 +1018,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
