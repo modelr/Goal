@@ -36,9 +36,10 @@ let state = null;
 let user = null;
 let mode = "guest";
 let saving = false;
-let hasPendingSync = false;
 let cloudReady = false;
-let lastCloudSaveOk = null;
+let isDirty = false;
+let lastSaveOk = null;
+let saveInProgress = false;
 let offlineModalShown = false;
 let saveModalConfirmHandler = null;
 let commentModalGoalId = null;
@@ -65,8 +66,6 @@ async function boot() {
   await runAuthInit({ reason: "boot" });
 
   updateNetBadge();
-  window.addEventListener("online", () => updateNetBadge());
-  window.addEventListener("offline", () => updateNetBadge());
 
   startHistorySizer(ui);
   window.addEventListener("resize", () => syncHistoryHeight(ui));
@@ -122,7 +121,9 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
   authFlowInProgress = true;
   authInitTimedOut = false;
   cloudReady = false;
-  lastCloudSaveOk = null;
+  lastSaveOk = null;
+  saveInProgress = false;
+  isDirty = false;
   dataChoicePending = false;
   hideDataChoiceModal(ui);
   logAuthStage(`Запуск загрузки (${reason})`);
@@ -185,17 +186,18 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
         }
         state = markOpened(normalizeState(effectiveCloud));
         saveUserStateLocal(user.id, state, { skipGuard: true });
-      hasPendingSync = false;
-      toast(ui, "Оставляем облачные данные");
-    } else if (choice === "local") {
+        isDirty = false;
+        lastSaveOk = true;
+        toast(ui, "Оставляем облачные данные");
+      } else if (choice === "local") {
         if (effectiveCloud) {
           backupState("cloud", effectiveCloud);
         }
         state = markOpened(normalizeState(guestState));
         saveUserStateLocal(user.id, state, { skipGuard: true });
         const res = await saveRemoteState(supabase, user.id, state, { skipGuard: true });
-      hasPendingSync = !res.ok;
-      lastCloudSaveOk = res.ok;
+        isDirty = !res.ok;
+        lastSaveOk = res.ok;
         if (!res.ok) showOfflineNotice("Мы оффлайн, данные не сохранятся.");
         toast(ui, "Оставляем локальные данные");
       }
@@ -207,7 +209,8 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
           : defaultState();
       state = markOpened(normalizeState(finalState));
       mode = user ? "remote" : "guest";
-      if (!user) hasPendingSync = false;
+      isDirty = false;
+      lastSaveOk = true;
     }
 
     cloudReady = !!user;
@@ -217,12 +220,16 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
     renderAll(ui, state);
     scrollToTop();
 
-    setAuthStage(ui, { text: "Загружено", visible: true, showRetry: false });
-    setTimeout(() => setAuthStage(ui, { text: "Загружено", visible: false }), AUTH_STATUS_HIDE_DELAY_MS);
+    if (user) {
+      setAuthStage(ui, { text: "Загружено", visible: true, showRetry: false });
+      setTimeout(() => setAuthStage(ui, { text: "Загружено", visible: false }), AUTH_STATUS_HIDE_DELAY_MS);
+    } else {
+      setAuthStage(ui, { text: "Требуется вход", visible: true, showRetry: false });
+    }
   } catch (err) {
     console.error(err);
     cloudReady = false;
-    lastCloudSaveOk = false;
+    lastSaveOk = false;
     setAuthStage(ui, { text: "Кажется, вход завис. Повторить?", visible: true, showRetry: true });
     updateNetBadge();
   } finally {
@@ -385,7 +392,7 @@ function wireEvents() {
       await supabase.auth.signOut();
       setLoginLoading(false);
       syncLoginButtonLabel();
-      setAuthStage(ui, { text: "Готово", visible: true });
+      setAuthStage(ui, { text: "Требуется вход", visible: true });
       return;
     }
 
@@ -705,41 +712,46 @@ async function persist() {
   if (saving) return;
   if (dataChoicePending || (authFlowInProgress && !authInitTimedOut)) return;
   saving = true;
+  saveInProgress = true;
   if (!user) {
-    saveGuestState(deviceId, state);
+    const localRes = saveGuestState(deviceId, state);
     setModeInfo(ui, "guest", user);
-    hasPendingSync = false;
-    lastCloudSaveOk = null;
+    isDirty = !localRes?.ok;
+    lastSaveOk = localRes?.ok || false;
     updateNetBadge();
     saving = false;
-    return { ok: true, mode: "guest" };
+    saveInProgress = false;
+    return { ok: !!localRes?.ok, mode: "guest" };
   }
 
   saveUserStateLocal(user.id, state);
   if (!cloudReady) {
-    hasPendingSync = true;
-    lastCloudSaveOk = null;
+    isDirty = true;
+    lastSaveOk = false;
     updateNetBadge();
-    showSyncToastOnce("Сессия не подтверждена, изменения не синхронизированы. Нажмите “Повторить”.");
+    showSyncToastOnce("Не удалось синхронизировать. Проверьте вход и нажмите ‘Повторить’.");
     saving = false;
+    saveInProgress = false;
     return { ok: false, mode: "local", reason: "cloud-not-ready" };
   }
   const res = await saveRemoteState(supabase, user.id, state);
   mode = "remote";
   setModeInfo(ui, mode, user);
   if (res.ok) {
-    hasPendingSync = false;
-    lastCloudSaveOk = true;
+    isDirty = false;
+    lastSaveOk = true;
   } else {
-    hasPendingSync = true;
-    lastCloudSaveOk = false;
+    isDirty = true;
+    lastSaveOk = false;
     showOfflineNotice("Мы оффлайн, данные не сохранятся.");
-    showSyncToastOnce("Ошибка синхронизации, изменения не сохранены.");
+    showSyncToastOnce("Не удалось синхронизировать. Проверьте вход и нажмите ‘Повторить’.");
   }
   updateNetBadge();
   saving = false;
+  saveInProgress = false;
   return { ...res, mode: "remote" };
 }
+
 
 function safeCreateSupabase() {
   try { return createSupabaseClient(); }
@@ -774,21 +786,18 @@ function debug(msg, obj) {
 }
 
 function markPendingSync() {
-  if (!user) return;
-  hasPendingSync = true;
-  if (!cloudReady) {
-    showSyncToastOnce("Сессия не подтверждена, изменения не синхронизированы. Нажмите “Повторить”.");
+  isDirty = true;
+  if (user && !cloudReady) {
+    showSyncToastOnce("Не удалось синхронизировать. Проверьте вход и нажмите ‘Повторить’.");
   }
   updateNetBadge();
 }
 
 function updateNetBadge() {
   setOnlineBadge(ui, {
-    isOnline: navigator.onLine,
-    user,
-    cloudReady,
-    lastCloudSaveOk,
-    hasPendingSync
+    isDirty,
+    lastSaveOk,
+    saveInProgress
   });
 }
 
@@ -1073,6 +1082,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
