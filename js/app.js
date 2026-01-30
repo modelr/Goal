@@ -177,23 +177,36 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
       if (choice === "cloud") {
         if (guestState) {
           backupState("guest", guestState);
-          const updatedGuest = {
-            ...guestState,
-            lastConflictResolvedAt: Date.now(),
-            lastConflictChoice: "cloud",
-          };
-          saveGuestState(deviceId, updatedGuest, { skipGuard: true });
         }
         state = markOpened(normalizeState(effectiveCloud));
+        const updatedGuest = {
+          ...state,
+          lastConflictResolvedAt: Date.now(),
+          lastConflictChoice: "cloud",
+        };
+        saveGuestState(deviceId, updatedGuest, { skipGuard: true });
         saveUserStateLocal(user.id, state, { skipGuard: true });
-        isDirty = false;
-        lastSaveOk = true;
+        if (!cloudState) {
+          const res = await saveRemoteState(supabase, user.id, state, { skipGuard: true });
+          isDirty = !res.ok;
+          lastSaveOk = res.ok;
+          if (!res.ok) showOfflineNotice("Мы оффлайн, данные не сохранятся.");
+        } else {
+          isDirty = false;
+          lastSaveOk = true;
+        }
         toast(ui, "Оставляем облачные данные");
       } else if (choice === "local") {
         if (effectiveCloud) {
           backupState("cloud", effectiveCloud);
         }
         state = markOpened(normalizeState(guestState));
+        const updatedLocal = {
+          ...state,
+          lastConflictResolvedAt: Date.now(),
+          lastConflictChoice: "local",
+        };
+        saveGuestState(deviceId, updatedLocal, { skipGuard: true });
         saveUserStateLocal(user.id, state, { skipGuard: true });
         const res = await saveRemoteState(supabase, user.id, state, { skipGuard: true });
         isDirty = !res.ok;
@@ -1082,6 +1095,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
