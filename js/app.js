@@ -63,14 +63,14 @@ async function boot() {
   applyTheme(loadTheme());
   setLoginLoading(false);
 
+  wireEvents();
+
   await runAuthInit({ reason: "boot" });
 
   updateNetBadge();
 
   startHistorySizer(ui);
   window.addEventListener("resize", () => syncHistoryHeight(ui));
-
-  wireEvents();
 
   if (supabase && !authListenerAttached) {
     authListenerAttached = true;
@@ -1082,6 +1082,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
