@@ -72,50 +72,24 @@ const CLOUD_CHECK_ICON = `
   </svg>
 `;
 
-export function setOnlineBadge(ui, { isOnline, user, cloudReady, hasPendingSync, lastCloudSaveOk }) {
+export function setOnlineBadge(ui, { isDirty, lastSaveOk, saveInProgress }) {
   if (!ui.netBadge) return;
 
   const badge = ui.netBadge;
-  if (!isOnline) {
-    badge.dataset.status = "offline";
-    badge.textContent = "Оффлайн";
-    badge.setAttribute("aria-label", "Оффлайн режим");
-    badge.title = "Оффлайн режим";
-    return;
-  }
-
-  if (!user || !cloudReady) {
-    badge.dataset.status = "needs-auth";
-    badge.textContent = "Требуется вход";
-    badge.setAttribute("aria-label", "Нужен вход для синхронизации");
-    badge.title = "Нужен вход для синхронизации";
-    return;
-  }
-
-  if (hasPendingSync) {
+  if (isDirty || lastSaveOk !== true || saveInProgress) {
     badge.dataset.status = "pending";
     badge.innerHTML = `<span class="netBadgeIcon">${CLOUD_ICON}</span><span class="netBadgeText">Не сохранено</span>`;
-    badge.setAttribute("aria-label", "Есть несохранённые изменения");
-    badge.title = "Есть несохранённые изменения";
+    badge.setAttribute("aria-label", "Не сохранено");
+    badge.title = lastSaveOk === false ? "Ошибка сохранения" : "Не сохранено";
     return;
   }
 
-  if (lastCloudSaveOk === true) {
-    badge.dataset.status = "synced";
-    badge.innerHTML = `<span class="netBadgeIcon">${CLOUD_CHECK_ICON}</span><span class="netBadgeText">Сохранено</span>`;
-    badge.setAttribute("aria-label", "Все изменения сохранены");
-    badge.title = "Все изменения сохранены";
-    return;
-  }
-
-  badge.dataset.status = "pending";
-  badge.innerHTML = `<span class="netBadgeIcon">${CLOUD_ICON}</span><span class="netBadgeText">Не сохранено</span>`;
-  badge.setAttribute(
-    "aria-label",
-    lastCloudSaveOk === false ? "Ошибка синхронизации" : "Изменения ещё не синхронизированы"
-  );
-  badge.title = lastCloudSaveOk === false ? "Ошибка синхронизации" : "Изменения ещё не синхронизированы";
+  badge.dataset.status = "synced";
+  badge.innerHTML = `<span class="netBadgeIcon">${CLOUD_CHECK_ICON}</span><span class="netBadgeText">Сохранено</span>`;
+  badge.setAttribute("aria-label", "Сохранено");
+  badge.title = "Сохранено";
 }
+
 
 export function setModeInfo(ui, mode, user) {
   if (user) {
@@ -480,6 +454,7 @@ export function scrollHistoryToDay(ui, key) {
   const target = entries[0];
   target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
 
 
 
