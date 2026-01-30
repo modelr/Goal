@@ -32,9 +32,7 @@ export function bindUI() {
     toast: el("toast"),
 	
 	authStatus: el("authStatus"),
-    authStageBar: el("authStageBar"),
-    authStageText: el("authStageText"),
-    authRetryBtn: el("authRetryBtn"),
+    authStatusBtn: el("authStatusBtn"),
     offlineModal: el("offlineModal"),
     offlineMessage: el("offlineMessage"),
     offlineOkBtn: el("offlineOkBtn"),
@@ -74,15 +72,23 @@ const CLOUD_CHECK_ICON = `
   </svg>
 `;
 
-export function setOnlineBadge(ui, { isOnline, user, hasPendingSync }) {
+export function setOnlineBadge(ui, { isOnline, user, cloudReady, hasPendingSync, lastCloudSaveOk }) {
   if (!ui.netBadge) return;
 
   const badge = ui.netBadge;
-  if (!isOnline || !user) {
+  if (!isOnline) {
     badge.dataset.status = "offline";
     badge.textContent = "Оффлайн";
     badge.setAttribute("aria-label", "Оффлайн режим");
     badge.title = "Оффлайн режим";
+    return;
+  }
+
+  if (!user || !cloudReady) {
+    badge.dataset.status = "needs-auth";
+    badge.textContent = "Требуется вход";
+    badge.setAttribute("aria-label", "Нужен вход для синхронизации");
+    badge.title = "Нужен вход для синхронизации";
     return;
   }
 
@@ -94,10 +100,21 @@ export function setOnlineBadge(ui, { isOnline, user, hasPendingSync }) {
     return;
   }
 
-  badge.dataset.status = "synced";
-  badge.innerHTML = `<span class="netBadgeIcon">${CLOUD_CHECK_ICON}</span><span class="netBadgeText">Сохранено</span>`;
-  badge.setAttribute("aria-label", "Все изменения сохранены");
-  badge.title = "Все изменения сохранены";
+  if (lastCloudSaveOk === true) {
+    badge.dataset.status = "synced";
+    badge.innerHTML = `<span class="netBadgeIcon">${CLOUD_CHECK_ICON}</span><span class="netBadgeText">Сохранено</span>`;
+    badge.setAttribute("aria-label", "Все изменения сохранены");
+    badge.title = "Все изменения сохранены";
+    return;
+  }
+
+  badge.dataset.status = "pending";
+  badge.innerHTML = `<span class="netBadgeIcon">${CLOUD_ICON}</span><span class="netBadgeText">Не сохранено</span>`;
+  badge.setAttribute(
+    "aria-label",
+    lastCloudSaveOk === false ? "Ошибка синхронизации" : "Изменения ещё не синхронизированы"
+  );
+  badge.title = lastCloudSaveOk === false ? "Ошибка синхронизации" : "Изменения ещё не синхронизированы";
 }
 
 export function setModeInfo(ui, mode, user) {
@@ -111,12 +128,11 @@ export function setModeInfo(ui, mode, user) {
 }
 
 export function setAuthStage(ui, { text, showRetry = false, visible = true } = {}) {
-  if (!ui.authStageBar || !ui.authStageText) return;
-  ui.authStageText.textContent = text || "—";
-  ui.authStageBar.hidden = !visible;
-  if (ui.authRetryBtn) {
-    ui.authRetryBtn.hidden = !showRetry;
-  }
+  if (!ui.authStatusBtn) return;
+  ui.authStatusBtn.textContent = text || "—";
+  ui.authStatusBtn.hidden = !visible;
+  ui.authStatusBtn.disabled = !showRetry;
+  ui.authStatusBtn.dataset.retry = showRetry ? "true" : "false";
 }
 
 export function renderDiffList(ui, sections = []) {
@@ -464,6 +480,7 @@ export function scrollHistoryToDay(ui, key) {
   const target = entries[0];
   target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
 
 
 
