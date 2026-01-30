@@ -45,6 +45,12 @@ body{
   min-height:100vh;
 }
 
+body.modalOpen,
+html.modalOpen{
+  overflow: hidden;
+  height: 100%;
+}
+
 /* Layout */
 .wrap{
   max-width: 1120px;
@@ -611,6 +617,7 @@ textarea{
   justify-content:center;
   padding: 14px;
   z-index: 20;
+  overscroll-behavior: contain;
 }
 .modalBackdrop.show{ display:flex; }
 
@@ -639,6 +646,34 @@ textarea{
 }
 .modalRow{ display: grid; gap: 10px; }
 button.pill.btn { cursor: pointer; }
+
+.modalSplit{
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+  padding: 0;
+  overflow: hidden;
+}
+
+.modalHeader{
+  padding: 16px 16px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.modalContent{
+  padding: 12px 16px 16px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.modalFooter{
+  padding: 12px 16px 16px;
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -8px 18px rgba(0,0,0,.18);
+}
 
 .modalTaskList{
   display: grid;
@@ -722,6 +757,7 @@ button.pill.btn { cursor: pointer; }
 .taskOption input{
   margin: 0;
 }
+
 
 
 
