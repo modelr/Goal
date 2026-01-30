@@ -272,7 +272,7 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
     console.error(err);
     cloudReady = false;
     lastSaveOk = false;
-    setAuthStage(ui, { text: "Кажется, вход завис. Повторить?", visible: true, showRetry: true });
+    setAuthStage(ui, { text: "Обновить", visible: true, showRetry: true });
     updateNetBadge();
   } finally {
     clearAuthTimeout();
@@ -291,7 +291,7 @@ function startAuthTimeout() {
   authStageTimer = setTimeout(() => {
     authInitTimedOut = true;
     cloudReady = false;
-    setAuthStage(ui, { text: "Кажется, вход завис. Повторить?", visible: true, showRetry: true });
+    setAuthStage(ui, { text: "Обновить", visible: true, showRetry: true });
     updateNetBadge();
   }, AUTH_TIMEOUT_MS);
 }
@@ -325,7 +325,7 @@ function wireEvents() {
     ui.authStatusBtn.addEventListener("click", () => {
       if (ui.authStatusBtn.dataset.retry !== "true") return;
       setAuthStage(ui, { text: "Проверяем сессию…", visible: true, showRetry: false });
-      runAuthInit({ force: true, reason: "manual-retry-authStatusBtn" });
+      location.reload();
     });
   }
 
@@ -1112,6 +1112,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
