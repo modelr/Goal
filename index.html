@@ -25,6 +25,11 @@
       </div>
     </header>
 
+    <div id="authStageBar" class="authStageBar" hidden>
+      <span id="authStageText" class="authStageText">—</span>
+      <button id="authRetryBtn" class="btn ghost small" hidden>Повторить</button>
+    </div>
+
     <main class="grid">
       <section class="card" id="mainCard">
         <h2>Долгосрочная цель “Ставка”</h2>
@@ -139,6 +144,21 @@
       </div>
     </div>
 
+    <div class="modalBackdrop" id="dataChoiceModal" hidden>
+      <div class="modal modalWide" role="dialog" aria-modal="true" aria-labelledby="dataChoiceTitle">
+        <h3 id="dataChoiceTitle">Найдены разные данные</h3>
+        <p class="muted">В облаке и на этом устройстве данные отличаются. Что оставить?</p>
+        <div class="row dataChoiceActions">
+          <button class="btn green" id="dataChoiceCloudBtn">Оставить облачные</button>
+          <button class="btn purple" id="dataChoiceLocalBtn">Оставить локальные с устройства</button>
+        </div>
+        <div class="diffSummary">
+          <div class="muted small">Что отличается:</div>
+          <div id="dataChoiceList" class="diffListWrap"></div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- libs -->
@@ -148,6 +168,7 @@
   <script type="module" src="./js/app.js"></script>
 </body>
 </html>
+
 
 
 
