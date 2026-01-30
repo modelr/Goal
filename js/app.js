@@ -718,9 +718,9 @@ async function persist() {
     setModeInfo(ui, "guest", user);
     isDirty = !localRes?.ok;
     lastSaveOk = localRes?.ok || false;
-    updateNetBadge();
     saving = false;
     saveInProgress = false;
+    updateNetBadge();
     return { ok: !!localRes?.ok, mode: "guest" };
   }
 
@@ -746,9 +746,9 @@ async function persist() {
     showOfflineNotice("Мы оффлайн, данные не сохранятся.");
     showSyncToastOnce("Не удалось синхронизировать. Проверьте вход и нажмите ‘Повторить’.");
   }
-  updateNetBadge();
   saving = false;
   saveInProgress = false;
+  updateNetBadge();
   return { ...res, mode: "remote" };
 }
 
@@ -1082,6 +1082,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
