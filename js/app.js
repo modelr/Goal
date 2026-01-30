@@ -2,7 +2,7 @@ import { createSupabaseClient } from "./supabaseClient.js";
 import {
   defaultState, normalizeState, addGoal, deleteGoal,
   addHistorySave, markOpened, completeGoal,
-  computeProgress, computeStreak, lastActionAt
+  computeStreak, lastActionAt
 } from "./state.js";
 import {
   getDeviceId,
@@ -942,7 +942,6 @@ function buildDiffSummary(localState, cloudState) {
 
   sections.push(buildGoalsDiff(local, cloud));
   sections.push(buildHistoryDiff(local, cloud));
-  sections.push(buildProgressDiff(local, cloud));
   sections.push(buildActivityDiff(local, cloud));
 
   return sections.filter(section => section);
@@ -1033,30 +1032,6 @@ function formatHistoryEntry(entry) {
   return `${date} — ${type}${text ? ` (${text})` : ""}`;
 }
 
-function buildProgressDiff(local, cloud) {
-  const localStreak = computeStreak(local.history || []);
-  const cloudStreak = computeStreak(cloud.history || []);
-  const localProgress = computeProgress(local);
-  const cloudProgress = computeProgress(cloud);
-
-  const items = [];
-  if (localStreak.streak !== cloudStreak.streak || localStreak.todayCounted !== cloudStreak.todayCounted) {
-    items.push(`Streak: облако ${cloudStreak.streak} дней, локально ${localStreak.streak} дней`);
-  }
-  if (
-    localProgress.done !== cloudProgress.done ||
-    localProgress.total !== cloudProgress.total ||
-    localProgress.pct !== cloudProgress.pct
-  ) {
-    items.push(`Прогресс: облако ${cloudProgress.done}/${cloudProgress.total} (${cloudProgress.pct}%), локально ${localProgress.done}/${localProgress.total} (${localProgress.pct}%)`);
-  }
-
-  return {
-    title: "Streak / прогресс",
-    items,
-  };
-}
-
 function buildActivityDiff(local, cloud) {
   const localLast = lastActionAt(local);
   const cloudLast = lastActionAt(cloud);
@@ -1095,6 +1070,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
