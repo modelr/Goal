@@ -113,6 +113,31 @@ export function setAuthStage(ui, { text, showRetry = false, visible = true } = {
 export function renderDiffList(ui, sections = []) {
   if (!ui.dataChoiceList) return;
   ui.dataChoiceList.innerHTML = "";
+  const appendText = (node, text) => {
+    node.appendChild(document.createTextNode(text));
+  };
+  const appendPrefix = (node, text) => {
+    const prefixSpan = document.createElement("span");
+    prefixSpan.className = "histPrefix";
+    prefixSpan.textContent = text;
+    node.appendChild(prefixSpan);
+  };
+  const renderGoalDiff = (li, item) => {
+    appendText(li, `${item.title} (`);
+    item.diffs.forEach((diff, index) => {
+      if (index > 0) appendText(li, ", ");
+      if (diff.type === "text") {
+        appendText(li, `${diff.label}: "${diff.from}" `);
+        appendPrefix(li, "на облаке");
+        appendText(li, " → ");
+        appendText(li, `"${diff.to}" `);
+        appendPrefix(li, "локально");
+        return;
+      }
+      appendText(li, `${diff.label}: ${diff.from} → ${diff.to}`);
+    });
+    appendText(li, ")");
+  };
   if (!sections.length) {
     const empty = document.createElement("div");
     empty.className = "muted small";
@@ -140,7 +165,11 @@ export function renderDiffList(ui, sections = []) {
     } else {
       section.items.forEach((item) => {
         const li = document.createElement("li");
-        li.textContent = item;
+        if (item?.type === "goal-change") {
+          renderGoalDiff(li, item);
+        } else {
+          li.textContent = item;
+        }
         list.appendChild(li);
       });
     }
@@ -485,6 +514,7 @@ export function scrollHistoryToDay(ui, key) {
   const target = entries[0];
   target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
 
 
 
