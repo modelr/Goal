@@ -111,21 +111,12 @@ export function completeGoal(s, goalId, { comment = "", keepGoal = false } = {})
   return { ...s, dailyGoals: goals, history: [entry, ...s.history] };
 }
 
-export function computeProgress(s) {
-  const total = s.dailyGoals.length;
-  const done = s.dailyGoals.filter(g => g.doneToday).length;
-  return { done, total, pct: total ? Math.round((done/total)*100) : 0 };
-}
-
 export function addHistorySave(s, options = {}) {
-  const prog = computeProgress(s);
   const focusGoal = String(options.focusGoal || "");
   const entry = {
     ts: nowMs(),
     type: "save",
     payload: {
-      done: prog.done,
-      total: prog.total,
       note: s.todayNote || "",
       focusGoal,
       goals: s.dailyGoals.map(g => ({ text: g.text || "", doneToday: !!g.doneToday })),
@@ -171,6 +162,7 @@ export function computeStreak(history) {
 
   return { streak, todayCounted };
 }
+
 
 
 
