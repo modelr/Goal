@@ -183,12 +183,16 @@ export function showDataChoiceModal(ui) {
   if (!ui.dataChoiceModal) return;
   ui.dataChoiceModal.hidden = false;
   ui.dataChoiceModal.classList.add("show");
+  document.body.classList.add("modalOpen");
+  document.documentElement.classList.add("modalOpen");
 }
 
 export function hideDataChoiceModal(ui) {
   if (!ui.dataChoiceModal) return;
   ui.dataChoiceModal.classList.remove("show");
   ui.dataChoiceModal.hidden = true;
+  document.body.classList.remove("modalOpen");
+  document.documentElement.classList.remove("modalOpen");
 }
 
 
@@ -514,6 +518,7 @@ export function scrollHistoryToDay(ui, key) {
   const target = entries[0];
   target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
 
 
 
