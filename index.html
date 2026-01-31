@@ -14,11 +14,20 @@
         <div class="logo"></div>
         <div>
           <div class="title">Goal</div>
-          <div class="subtitle">Ставка (долгосрочная ЦЕЛЬ) • Цели на день • Streak • автоудаление через 36 часов без действий</div>
+          <div class="subtitle goalSummary" id="mandatoryGoalSummary">
+            <button class="goalSummaryButton" id="mandatoryGoalSummaryBtn" type="button">Обязательная цель</button>
+            <span class="goalSummaryText" id="mandatoryGoalSummaryText">—</span>
+            <button class="goalInfoButton" id="mandatoryGoalInfoBtn" type="button" aria-label="Детали обязательной цели" hidden>ℹ️</button>
+            <div class="goalPopover" id="mandatoryGoalPopover" role="dialog" aria-live="polite" hidden></div>
+          </div>
         </div>
       </div>
 
       <div class="actions">
+        <div class="goalActionWrap" id="mandatoryGoalActionWrap">
+          <button id="mandatoryGoalActionBtn" class="pill btn">Задать цель</button>
+          <span class="goalActionText" id="mandatoryGoalActionText" hidden></span>
+        </div>
         <button id="authStatusBtn" class="pill btn ghost" hidden>Проверяем сессию…</button>
         <span id="netBadge" class="pill">Офлайн</span>
         <button id="btnLogin" class="pill btn">🔐 Войти</button>
@@ -28,19 +37,6 @@
 
     <main class="grid">
       <section class="card" id="mainCard">
-        <h2>Долгосрочная цель “Ставка”</h2>
-        <p class="muted">Это цель на месяц/квартал. Ставишь одну. Когда достигнута — жмёшь “Готово”.</p>
-
-        <input id="stakeInput" class="input" placeholder="Например: Сделать IronMan 226" />
-
-        <div class="row">
-          <button id="stakeDoneBtn" class="btn green">✅ Готово</button>
-          <span id="stakeStatus" class="pill mutedPill">Статус: —</span>
-        </div>
-        <div id="stakeMeta" class="muted small">—</div>
-
-        <div class="sep"></div>
-
         <h2>Цели на день</h2>
         <p class="muted">Добавляй дневные цели кнопкой “+”. Отмечай выполненные за сегодня. Ctrl+Enter сохраняет запись.</p>
 
@@ -161,6 +157,45 @@
       </div>
     </div>
 
+    <div class="modalBackdrop" id="mandatoryGoalModal" hidden>
+      <div class="modal modalWide modalSplit" role="dialog" aria-modal="true" aria-labelledby="mandatoryGoalTitle">
+        <div class="modalHeader">
+          <h3 id="mandatoryGoalTitle">Моя главная цель</h3>
+          <p class="muted">Заполни основные поля — и цель появится в шапке.</p>
+        </div>
+        <div class="modalContent">
+          <div class="modalRow">
+            <label class="modalField">
+              <span class="modalLabel">Моя главная цель (на период)</span>
+              <input id="mandatoryGoalTitleInput" class="input" maxlength="120" placeholder="Сделать Ironman 226 к 19 Октября" />
+              <span class="fieldError" id="mandatoryGoalTitleError" hidden>Заполните поле</span>
+            </label>
+            <label class="modalField">
+              <span class="modalLabel">Какой результат/метрика</span>
+              <input id="mandatoryGoalMetricInput" class="input" maxlength="120" placeholder="Финишировал с улыбкой на лице )" />
+              <span class="fieldError" id="mandatoryGoalMetricError" hidden>Заполните поле</span>
+            </label>
+            <label class="modalField">
+              <span class="modalLabel">Почему это важно (зачем)</span>
+              <textarea id="mandatoryGoalWhyInput" class="textarea" maxlength="800" placeholder="Напиши 1–2 предложения или 3 буллета."></textarea>
+              <span class="fieldError" id="mandatoryGoalWhyError" hidden>Заполните поле</span>
+            </label>
+            <label class="modalField">
+              <span class="modalLabel">Минимальный шаг на плохой день (optional)</span>
+              <input id="mandatoryGoalMinStepInput" class="input" maxlength="120" placeholder="Занимаемся 15 минут" />
+              <span class="fieldError" id="mandatoryGoalMinStepError" hidden>Заполните поле</span>
+            </label>
+          </div>
+        </div>
+        <div class="modalFooter">
+          <div class="row">
+            <button class="btn purple" id="mandatoryGoalSaveBtn">Сохранить</button>
+            <button class="btn" id="mandatoryGoalCancelBtn">Отмена</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- libs -->
@@ -170,6 +205,7 @@
   <script type="module" src="./js/app.js"></script>
 </body>
 </html>
+
 
 
 
