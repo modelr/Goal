@@ -309,11 +309,12 @@ export function renderMandatoryGoal(ui, state) {
   const shortTitle = title.length > 48 ? `${title.slice(0, 48).trim()}…` : title;
 
   ui.mandatoryGoalSummaryText.textContent = hasGoal ? `: “${shortTitle}”` : "—";
-  ui.mandatoryGoalActionBtn.textContent = hasGoal ? "Моя цель" : "Задать цель";
+  ui.mandatoryGoalActionBtn.textContent = "Моя цель";
+  ui.mandatoryGoalActionBtn.hidden = hasGoal;
 
   if (ui.mandatoryGoalActionText) {
-    ui.mandatoryGoalActionText.hidden = !hasGoal;
-    ui.mandatoryGoalActionText.textContent = hasGoal ? `: “${shortTitle}”` : "";
+    ui.mandatoryGoalActionText.hidden = true;
+    ui.mandatoryGoalActionText.textContent = "";
   }
 
   if (ui.mandatoryGoalInfoBtn) {
@@ -566,6 +567,7 @@ export function scrollHistoryToDay(ui, key) {
   const target = entries[0];
   target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
 
 
 
