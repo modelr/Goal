@@ -52,6 +52,7 @@ const SYNC_TOAST_THROTTLE_MS = 8000;
 let authListenerAttached = false;
 let authFlowInProgress = false;
 let dataChoicePending = false;
+let pendingSave = false;
 let authStageTimer = null;
 let authInitTimedOut = false;
 let lastSyncToastAt = 0;
@@ -278,6 +279,10 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
   } finally {
     clearAuthTimeout();
     authFlowInProgress = false;
+    if (pendingSave && !dataChoicePending) {
+      pendingSave = false;
+      persist();
+    }
   }
 }
 
@@ -899,11 +904,14 @@ function renderSaveTasks(tasks, showTasks) {
 }
 
 let saveTimer = null;
-function scheduleSave() {
-  if (dataChoicePending || (authFlowInProgress && !authInitTimedOut)) {
-    debug("Save skipped: awaiting auth/data choice");
+async function persist() {
+  if (saving) return;
+  if (authFlowInProgress && !authInitTimedOut) {
+    pendingSave = true;
+    markPendingSync();
     return;
   }
+  if (dataChoicePending) return;
   if (saveTimer) clearTimeout(saveTimer);
   markPendingSync();
   saveTimer = setTimeout(() => persist(), 350);
@@ -911,7 +919,12 @@ function scheduleSave() {
 
 async function persist() {
   if (saving) return;
-  if (dataChoicePending || (authFlowInProgress && !authInitTimedOut)) return;
+  if (authFlowInProgress && !authInitTimedOut) {
+    pendingSave = true;
+    markPendingSync();
+    return;
+  }
+  if (dataChoicePending) return;
   saving = true;
   saveInProgress = true;
   if (!user) {
@@ -1309,4 +1322,5 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
