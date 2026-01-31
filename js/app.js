@@ -44,6 +44,7 @@ let offlineModalShown = false;
 let saveModalConfirmHandler = null;
 let commentModalGoalId = null;
 let dataChoiceResolve = null;
+let mandatoryGoalReturnFocusEl = null;
 const THEME_KEY = "goal-theme";
 const AUTH_TIMEOUT_MS = 18000;
 const AUTH_STATUS_HIDE_DELAY_MS = 2200;
@@ -329,23 +330,24 @@ function wireEvents() {
     });
   }
 
-  // stake
-  ui.stakeInput.addEventListener("input", () => {
-    state.stake.text = ui.stakeInput.value;
-    if (!state.stake.createdAt) state.stake.createdAt = Date.now();
-    state = markOpened(state);
-    renderAll(ui, state);
-    scheduleSave();
-  });
+  if (ui.mandatoryGoalActionBtn) {
+    ui.mandatoryGoalActionBtn.addEventListener("click", () => {
+      openMandatoryGoalModal();
+    });
+  }
 
-  ui.stakeDoneBtn.addEventListener("click", () => {
-    state.stake.done = !state.stake.done;
-    if (!state.stake.createdAt) state.stake.createdAt = Date.now();
-    state.stake.doneAt = state.stake.done ? Date.now() : null;
-    state = markOpened(state);
-    renderAll(ui, state);
-    scheduleSave();
-  });
+  if (ui.mandatoryGoalSummaryBtn) {
+    ui.mandatoryGoalSummaryBtn.addEventListener("click", () => {
+      openMandatoryGoalModal();
+    });
+  }
+
+  if (ui.mandatoryGoalInfoBtn) {
+    ui.mandatoryGoalInfoBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      toggleMandatoryGoalPopover();
+    });
+  }
 
   // goals list delegation
   ui.goalsList.addEventListener("input", (e) => {
@@ -521,6 +523,18 @@ function wireEvents() {
     });
   }
 
+  if (ui.mandatoryGoalSaveBtn && ui.mandatoryGoalModal) {
+    ui.mandatoryGoalSaveBtn.addEventListener("click", () => {
+      handleMandatoryGoalSave();
+    });
+  }
+
+  if (ui.mandatoryGoalCancelBtn && ui.mandatoryGoalModal) {
+    ui.mandatoryGoalCancelBtn.addEventListener("click", () => {
+      closeMandatoryGoalModal({ reason: "cancel" });
+    });
+  }
+
   if (ui.dataChoiceCloudBtn) {
     ui.dataChoiceCloudBtn.addEventListener("click", () => {
       if (dataChoiceResolve) {
@@ -602,6 +616,28 @@ function wireEvents() {
       }
     });
   }
+
+  if (ui.mandatoryGoalModal) {
+    ui.mandatoryGoalModal.addEventListener("click", (e) => {
+      if (e.target === ui.mandatoryGoalModal) {
+        closeMandatoryGoalModal({ reason: "backdrop" });
+      }
+    });
+  }
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    if (ui.mandatoryGoalModal?.classList.contains("show")) {
+      closeMandatoryGoalModal({ reason: "escape" });
+    }
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!ui.mandatoryGoalPopover || ui.mandatoryGoalPopover.hidden) return;
+    if (ui.mandatoryGoalPopover.contains(e.target)) return;
+    if (ui.mandatoryGoalInfoBtn?.contains(e.target)) return;
+    ui.mandatoryGoalPopover.hidden = true;
+  });
 
   if (ui.dataChoiceModal) {
     ui.dataChoiceModal.addEventListener("click", (e) => {
@@ -719,6 +755,104 @@ function closeCommentModal() {
   ui.commentModal.classList.remove("show");
   ui.commentModal.hidden = true;
   commentModalGoalId = null;
+}
+
+function openMandatoryGoalModal() {
+  if (!ui.mandatoryGoalModal) return;
+  mandatoryGoalReturnFocusEl = document.activeElement;
+  const goal = state?.mandatoryGoal || {};
+  if (ui.mandatoryGoalPopover) {
+    ui.mandatoryGoalPopover.hidden = true;
+  }
+  if (ui.mandatoryGoalTitleInput) ui.mandatoryGoalTitleInput.value = goal.title || "";
+  if (ui.mandatoryGoalMetricInput) ui.mandatoryGoalMetricInput.value = goal.metric || "";
+  if (ui.mandatoryGoalWhyInput) ui.mandatoryGoalWhyInput.value = goal.why || "";
+  if (ui.mandatoryGoalMinStepInput) ui.mandatoryGoalMinStepInput.value = goal.minStep || "";
+  clearMandatoryGoalErrors();
+  ui.mandatoryGoalModal.hidden = false;
+  ui.mandatoryGoalModal.classList.add("show");
+  document.body.classList.add("modalOpen");
+  document.documentElement.classList.add("modalOpen");
+  if (ui.mandatoryGoalTitleInput) ui.mandatoryGoalTitleInput.focus();
+}
+
+function closeMandatoryGoalModal({ reason } = {}) {
+  if (!ui.mandatoryGoalModal) return;
+  if (reason === "escape" || reason === "backdrop" || reason === "cancel") {
+    clearMandatoryGoalErrors();
+  }
+  ui.mandatoryGoalModal.classList.remove("show");
+  ui.mandatoryGoalModal.hidden = true;
+  document.body.classList.remove("modalOpen");
+  document.documentElement.classList.remove("modalOpen");
+  if (mandatoryGoalReturnFocusEl && typeof mandatoryGoalReturnFocusEl.focus === "function") {
+    mandatoryGoalReturnFocusEl.focus();
+  }
+  mandatoryGoalReturnFocusEl = null;
+}
+
+function clearMandatoryGoalErrors() {
+  setMandatoryGoalFieldError(ui.mandatoryGoalTitleInput, ui.mandatoryGoalTitleError, false);
+  setMandatoryGoalFieldError(ui.mandatoryGoalMetricInput, ui.mandatoryGoalMetricError, false);
+  setMandatoryGoalFieldError(ui.mandatoryGoalWhyInput, ui.mandatoryGoalWhyError, false);
+  if (ui.mandatoryGoalMinStepError) {
+    ui.mandatoryGoalMinStepError.hidden = true;
+  }
+}
+
+function setMandatoryGoalFieldError(inputEl, errorEl, hasError) {
+  if (inputEl) inputEl.classList.toggle("inputError", hasError);
+  if (errorEl) errorEl.hidden = !hasError;
+}
+
+function handleMandatoryGoalSave() {
+  const title = sanitizeMandatoryGoalValue(ui.mandatoryGoalTitleInput?.value || "", 120);
+  const metric = sanitizeMandatoryGoalValue(ui.mandatoryGoalMetricInput?.value || "", 120);
+  const why = sanitizeMandatoryGoalValue(ui.mandatoryGoalWhyInput?.value || "", 800);
+  const minStep = sanitizeMandatoryGoalValue(ui.mandatoryGoalMinStepInput?.value || "", 120);
+
+  if (ui.mandatoryGoalTitleInput) ui.mandatoryGoalTitleInput.value = title;
+  if (ui.mandatoryGoalMetricInput) ui.mandatoryGoalMetricInput.value = metric;
+  if (ui.mandatoryGoalWhyInput) ui.mandatoryGoalWhyInput.value = why;
+  if (ui.mandatoryGoalMinStepInput) ui.mandatoryGoalMinStepInput.value = minStep;
+
+  const titleOk = Boolean(title);
+  const metricOk = Boolean(metric);
+  const whyOk = Boolean(why);
+
+  setMandatoryGoalFieldError(ui.mandatoryGoalTitleInput, ui.mandatoryGoalTitleError, !titleOk);
+  setMandatoryGoalFieldError(ui.mandatoryGoalMetricInput, ui.mandatoryGoalMetricError, !metricOk);
+  setMandatoryGoalFieldError(ui.mandatoryGoalWhyInput, ui.mandatoryGoalWhyError, !whyOk);
+
+  if (!titleOk || !metricOk || !whyOk) {
+    return;
+  }
+
+  const now = Date.now();
+  const existing = state?.mandatoryGoal || {};
+  state.mandatoryGoal = {
+    title,
+    metric,
+    why,
+    minStep,
+    createdAt: existing.createdAt || now,
+    updatedAt: now,
+  };
+  state = markOpened(state);
+  renderAll(ui, state);
+  scheduleSave();
+  closeMandatoryGoalModal({ reason: "save" });
+}
+
+function sanitizeMandatoryGoalValue(value, maxLength) {
+  const trimmed = String(value || "").trim();
+  if (trimmed.length <= maxLength) return trimmed;
+  return trimmed.slice(0, maxLength);
+}
+
+function toggleMandatoryGoalPopover() {
+  if (!ui.mandatoryGoalPopover) return;
+  ui.mandatoryGoalPopover.hidden = !ui.mandatoryGoalPopover.hidden;
 }
 
 function renderSaveTasks(tasks, showTasks) {
@@ -899,8 +1033,9 @@ function saveTheme(theme) {
 
 function hasMeaningfulState(state) {
   if (!state) return false;
-  if (state?.stake?.text) return true;
-  if (state?.stake?.done) return true;
+  if (state?.mandatoryGoal?.title) return true;
+  if (state?.mandatoryGoal?.metric) return true;
+  if (state?.mandatoryGoal?.why) return true;
   if (Array.isArray(state?.dailyGoals)) {
     const goalHasData = state.dailyGoals.some(goal =>
       (goal?.text && String(goal.text).trim()) ||
@@ -935,9 +1070,13 @@ function normalizeForCompare(state) {
     .sort((a, b) => (a.ts || 0) - (b.ts || 0));
 
   return {
-    stake: {
-      text: String(normalized.stake?.text || ""),
-      done: !!normalized.stake?.done,
+    mandatoryGoal: {
+      title: String(normalized.mandatoryGoal?.title || ""),
+      metric: String(normalized.mandatoryGoal?.metric || ""),
+      why: String(normalized.mandatoryGoal?.why || ""),
+      minStep: String(normalized.mandatoryGoal?.minStep || ""),
+      createdAt: normalized.mandatoryGoal?.createdAt || null,
+      updatedAt: normalized.mandatoryGoal?.updatedAt || null,
     },
     dailyGoals: goals,
     todayNote: String(normalized.todayNote || ""),
@@ -982,11 +1121,38 @@ function buildDiffSummary(localState, cloudState) {
   const cloud = normalizeState(cloudState);
   const sections = [];
 
+  sections.push(buildMandatoryGoalDiff(local, cloud));
   sections.push(buildGoalsDiff(local, cloud));
   sections.push(buildHistoryDiff(local, cloud));
   sections.push(buildActivityDiff(local, cloud));
 
   return sections.filter(section => section);
+}
+
+function buildMandatoryGoalDiff(local, cloud) {
+  const localGoal = local.mandatoryGoal || {};
+  const cloudGoal = cloud.mandatoryGoal || {};
+  const fields = [
+    { key: "title", label: "Цель" },
+    { key: "metric", label: "Метрика" },
+    { key: "why", label: "Почему важно" },
+    { key: "minStep", label: "Минимальный шаг" },
+  ];
+  const diffs = fields
+    .map((field) => {
+      const localValue = String(localGoal[field.key] || "");
+      const cloudValue = String(cloudGoal[field.key] || "");
+      if (localValue === cloudValue) return null;
+      return `${field.label}: облако “${cloudValue || "—"}” → локально “${localValue || "—"}”`;
+    })
+    .filter(Boolean);
+
+  if (!diffs.length) return null;
+
+  return {
+    title: "Обязательная цель",
+    items: diffs,
+  };
 }
 
 function buildGoalsDiff(local, cloud) {
@@ -1131,19 +1297,3 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
