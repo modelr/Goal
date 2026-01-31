@@ -19,6 +19,7 @@ export function defaultState() {
     // история: массив записей␊
     history: [], // {ts, type, payload}
   };
+}
 
 export function normalizeState(s) {
   const base = defaultState();
@@ -208,6 +209,7 @@ export function computeStreak(history) {
 
   return { streak, todayCounted };
 }
+
 
 
 
