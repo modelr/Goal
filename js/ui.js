@@ -299,7 +299,7 @@ export function renderMeta(ui, state) {
 
 
 export function renderMandatoryGoal(ui, state) {
-  if (!ui.mandatoryGoalSummaryText || !ui.mandatoryGoalActionBtn) return;
+  if (!ui.mandatoryGoalSummaryText) return;
   const goal = state?.mandatoryGoal || {};
   const title = String(goal.title || "").trim();
   const metric = String(goal.metric || "").trim();
@@ -309,8 +309,10 @@ export function renderMandatoryGoal(ui, state) {
   const shortTitle = title.length > 48 ? `${title.slice(0, 48).trim()}…` : title;
 
   ui.mandatoryGoalSummaryText.textContent = hasGoal ? `: “${shortTitle}”` : "—";
-  ui.mandatoryGoalActionBtn.textContent = "Моя цель";
-  ui.mandatoryGoalActionBtn.hidden = hasGoal;
+  if (ui.mandatoryGoalActionBtn) {
+    ui.mandatoryGoalActionBtn.textContent = "Моя цель";
+    ui.mandatoryGoalActionBtn.hidden = hasGoal;
+  }
 
   if (ui.mandatoryGoalActionText) {
     ui.mandatoryGoalActionText.hidden = true;
@@ -567,6 +569,7 @@ export function scrollHistoryToDay(ui, key) {
   const target = entries[0];
   target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
 
 
 
