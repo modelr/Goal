@@ -493,13 +493,14 @@ textarea{
   }
 
   .goalSummary{
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
   }
 
   .goalSummaryText{
     white-space: normal;
     overflow: visible;
     text-overflow: initial;
+    flex: 1 1 auto;
   }
 }
 
@@ -943,6 +944,7 @@ button.pill.btn { cursor: pointer; }
 .taskOption input{
   margin: 0;
 }
+
 
 
 
