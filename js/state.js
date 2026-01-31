@@ -117,13 +117,16 @@ export function addGoal(s) {
 export function deleteGoal(s, goalId) {
   const g = s.dailyGoals.find(x => x.id === goalId);
   const goals = s.dailyGoals.filter(x => x.id !== goalId);
-  const wasDoneToday = !!g?.doneToday;
 
   // Важное: удаление уходит в историю
   const history = [{
     ts: nowMs(),
-    type: wasDoneToday ? "done_goal" : "delete_goal",
-    payload: { text: g?.text || "", goalId }
+    type: "delete_goal",
+    payload: {
+      text: g?.text || "",
+      goalId,
+      wasDoneToday: !!g?.doneToday,
+    }
   }, ...s.history];
 
   return { ...s, dailyGoals: goals.length ? goals : [{ id: uid(), text: "", doneToday: false, isDaily: false }], history };
@@ -173,9 +176,10 @@ export function addHistorySave(s, options = {}) {
 }
 
 export function daysMapFromHistory(history) {
-  // засчитываем день, если есть ЛЮБАЯ запись в этот день
+  // засчитываем день, если есть запись, отличная от удаления цели
   const map = new Set();
   for (const e of (history || [])) {
+    if (e?.type === "delete_goal") continue;
     const d = dayKey(e.ts);
     map.add(d);
   }
@@ -209,6 +213,7 @@ export function computeStreak(history) {
 
   return { streak, todayCounted };
 }
+
 
 
 
