@@ -128,6 +128,7 @@ h1{
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 3px;
+  white-space: nowrap;
 }
 
 .goalSummaryText{
@@ -432,6 +433,35 @@ textarea{
   .row{ align-items:stretch; }
   .row > .btn{ width:100%; justify-content:center; }
   .row.actionsSplit{ flex-wrap:wrap; }
+}
+
+@media (max-width: 640px){
+  .topbar{
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .actions{
+    order: -1;
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: nowrap;
+  }
+
+  .brand{
+    width: 100%;
+  }
+
+  .goalSummary{
+    flex-wrap: wrap;
+  }
+
+  .goalSummaryText{
+    white-space: normal;
+    overflow: visible;
+    text-overflow: initial;
+  }
 }
 
 /* Goals list + items */
@@ -874,6 +904,7 @@ button.pill.btn { cursor: pointer; }
 .taskOption input{
   margin: 0;
 }
+
 
 
 
