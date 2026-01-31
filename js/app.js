@@ -617,16 +617,11 @@ function wireEvents() {
     });
   }
 
-  if (ui.mandatoryGoalModal) {
-    ui.mandatoryGoalModal.addEventListener("click", (e) => {
-      if (e.target === ui.mandatoryGoalModal) {
-        closeMandatoryGoalModal({ reason: "backdrop" });
-      }
-    });
-  }
-
   window.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
+    if (ui.mandatoryGoalPopover && !ui.mandatoryGoalPopover.hidden) {
+      ui.mandatoryGoalPopover.hidden = true;
+    }
     if (ui.mandatoryGoalModal?.classList.contains("show")) {
       closeMandatoryGoalModal({ reason: "escape" });
     }
@@ -852,7 +847,24 @@ function sanitizeMandatoryGoalValue(value, maxLength) {
 
 function toggleMandatoryGoalPopover() {
   if (!ui.mandatoryGoalPopover) return;
-  ui.mandatoryGoalPopover.hidden = !ui.mandatoryGoalPopover.hidden;
+  const willShow = ui.mandatoryGoalPopover.hidden;
+  ui.mandatoryGoalPopover.hidden = !willShow;
+  if (willShow) {
+    setMandatoryGoalPopoverWidth();
+  }
+}
+
+function setMandatoryGoalPopoverWidth() {
+  if (!ui.mandatoryGoalPopover || !ui.mainCard) return;
+  const summaryEl = ui.mandatoryGoalPopover.parentElement;
+  if (!summaryEl) return;
+  const summaryRect = summaryEl.getBoundingClientRect();
+  const mainRect = ui.mainCard.getBoundingClientRect();
+  const viewportWidth = document.documentElement.clientWidth;
+  const desiredWidth = Math.max(320, mainRect.right - summaryRect.left);
+  const maxWidth = viewportWidth - summaryRect.left - 16;
+  const width = Math.max(0, Math.min(desiredWidth, maxWidth));
+  ui.mandatoryGoalPopover.style.width = `${width}px`;
 }
 
 function renderSaveTasks(tasks, showTasks) {
@@ -1297,3 +1309,4 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
