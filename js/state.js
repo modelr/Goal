@@ -6,22 +6,49 @@ export function defaultState() {
   return {
     v: APP.VERSION,
     lastOpenAt: nowMs(),
-    stake: { text: "", done: false, createdAt: nowMs(), doneAt: null },
+    mandatoryGoal: {
+      title: "",
+      metric: "",
+      why: "",
+      minStep: "",
+      createdAt: null,
+      updatedAt: null,
+    },
     dailyGoals: [{ id: uid(), text: "", doneToday: false, isDaily: false }],
     todayNote: "",
     // история: массив записей␊
     history: [], // {ts, type, payload}
   };
-}
 
 export function normalizeState(s) {
   const base = defaultState();
   const out = { ...base, ...(s || {}) };
   out.lastOpenAt = typeof out.lastOpenAt === "number" ? out.lastOpenAt : nowMs();
 
-  // stake
-  out.stake = { ...base.stake, ...(out.stake || {}) };
-  if (!out.stake.createdAt) out.stake.createdAt = nowMs();
+  // mandatory goal (with migration from stake)
+  out.mandatoryGoal = { ...base.mandatoryGoal, ...(out.mandatoryGoal || {}) };
+  const mandatoryHasData = Boolean(
+    String(out.mandatoryGoal.title || "").trim() ||
+    String(out.mandatoryGoal.metric || "").trim() ||
+    String(out.mandatoryGoal.why || "").trim() ||
+    String(out.mandatoryGoal.minStep || "").trim()
+  );
+  if (!mandatoryHasData && out.stake?.text) {
+    out.mandatoryGoal = {
+      ...out.mandatoryGoal,
+      title: String(out.stake.text || ""),
+      createdAt: out.stake.createdAt || nowMs(),
+      updatedAt: out.stake.createdAt || nowMs(),
+    };
+  }
+  out.mandatoryGoal.title = String(out.mandatoryGoal.title ?? "");
+  out.mandatoryGoal.metric = String(out.mandatoryGoal.metric ?? "");
+  out.mandatoryGoal.why = String(out.mandatoryGoal.why ?? "");
+  out.mandatoryGoal.minStep = String(out.mandatoryGoal.minStep ?? "");
+  if (mandatoryHasData && !out.mandatoryGoal.createdAt) out.mandatoryGoal.createdAt = nowMs();
+  if (!out.mandatoryGoal.updatedAt && out.mandatoryGoal.createdAt) {
+    out.mandatoryGoal.updatedAt = out.mandatoryGoal.createdAt;
+  }
 
   // dailyGoals: по дефолту одна
    if (!Array.isArray(out.dailyGoals) || out.dailyGoals.length === 0) {
@@ -181,6 +208,7 @@ export function computeStreak(history) {
 
   return { streak, todayCounted };
 }
+
 
 
 
