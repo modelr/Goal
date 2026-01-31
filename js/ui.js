@@ -10,10 +10,12 @@ export function bindUI() {
     btnLogin: el("btnLogin"),
     btnTheme: el("btnTheme"),
 
-    stakeInput: el("stakeInput"),
-    stakeDoneBtn: el("stakeDoneBtn"),
-    stakeStatus: el("stakeStatus"),
-    stakeMeta: el("stakeMeta"),
+    mandatoryGoalActionBtn: el("mandatoryGoalActionBtn"),
+    mandatoryGoalActionText: el("mandatoryGoalActionText"),
+    mandatoryGoalSummaryBtn: el("mandatoryGoalSummaryBtn"),
+    mandatoryGoalSummaryText: el("mandatoryGoalSummaryText"),
+    mandatoryGoalInfoBtn: el("mandatoryGoalInfoBtn"),
+    mandatoryGoalPopover: el("mandatoryGoalPopover"),
 	  
     btnAddGoal: el("btnAddGoal"),
     ttlInfo: el("ttlInfo"),
@@ -51,6 +53,18 @@ export function bindUI() {
     dataChoiceCloudBtn: el("dataChoiceCloudBtn"),
     dataChoiceLocalBtn: el("dataChoiceLocalBtn"),
     dataChoiceList: el("dataChoiceList"),
+
+    mandatoryGoalModal: el("mandatoryGoalModal"),
+    mandatoryGoalTitleInput: el("mandatoryGoalTitleInput"),
+    mandatoryGoalMetricInput: el("mandatoryGoalMetricInput"),
+    mandatoryGoalWhyInput: el("mandatoryGoalWhyInput"),
+    mandatoryGoalMinStepInput: el("mandatoryGoalMinStepInput"),
+    mandatoryGoalTitleError: el("mandatoryGoalTitleError"),
+    mandatoryGoalMetricError: el("mandatoryGoalMetricError"),
+    mandatoryGoalWhyError: el("mandatoryGoalWhyError"),
+    mandatoryGoalMinStepError: el("mandatoryGoalMinStepError"),
+    mandatoryGoalSaveBtn: el("mandatoryGoalSaveBtn"),
+    mandatoryGoalCancelBtn: el("mandatoryGoalCancelBtn"),
 
   };
 }
@@ -198,7 +212,7 @@ export function hideDataChoiceModal(ui) {
 
 export function renderAll(ui, state) {
   renderMeta(ui, state);
-  renderStake(ui, state);
+  renderMandatoryGoal(ui, state);
   renderGoals(ui, state);
   renderTodayNote(ui, state);
   renderStreak(ui, state);
@@ -284,24 +298,58 @@ export function renderMeta(ui, state) {
 }
 
 
-export function renderStake(ui, state) {
-  const done = !!state.stake.done;
-  ui.stakeInput.value = state.stake.text || "";
-  ui.stakeInput.classList.toggle("strike", done);
-  ui.stakeStatus.textContent = done ? "Статус: Готово ✅" : "Статус: В процессе";
+export function renderMandatoryGoal(ui, state) {
+  if (!ui.mandatoryGoalSummaryText || !ui.mandatoryGoalActionBtn) return;
+  const goal = state?.mandatoryGoal || {};
+  const title = String(goal.title || "").trim();
+  const metric = String(goal.metric || "").trim();
+  const why = String(goal.why || "").trim();
+  const minStep = String(goal.minStep || "").trim();
+  const hasGoal = Boolean(title && metric && why);
+  const shortTitle = title.length > 48 ? `${title.slice(0, 48).trim()}…` : title;
 
-  if (ui.stakeDoneBtn) {
-    ui.stakeDoneBtn.textContent = done ? "↩️ Вернуть в работу" : "✅ Готово";
-    ui.stakeDoneBtn.classList.toggle("ghost", done);
+  ui.mandatoryGoalSummaryText.textContent = hasGoal ? `: “${shortTitle}”` : "—";
+  ui.mandatoryGoalActionBtn.textContent = hasGoal ? "Моя цель" : "Задать цель";
+
+  if (ui.mandatoryGoalActionText) {
+    ui.mandatoryGoalActionText.hidden = !hasGoal;
+    ui.mandatoryGoalActionText.textContent = hasGoal ? `: “${shortTitle}”` : "";
   }
 
-  if (ui.stakeMeta) {
-    const created = state.stake.createdAt ? new Date(state.stake.createdAt).toLocaleDateString("ru-RU") : "—";
-    const doneAt = state.stake.doneAt ? new Date(state.stake.doneAt).toLocaleString("ru-RU") : "—";
-    ui.stakeMeta.textContent = done
-      ? `Создано: ${created} • Завершено: ${doneAt}`
-      : `Создано: ${created}`;
+  if (ui.mandatoryGoalInfoBtn) {
+    ui.mandatoryGoalInfoBtn.hidden = !hasGoal;
   }
+
+  if (ui.mandatoryGoalPopover) {
+    ui.mandatoryGoalPopover.hidden = true;
+    if (!hasGoal) {
+      ui.mandatoryGoalPopover.innerHTML = "";
+      return;
+    }
+    ui.mandatoryGoalPopover.innerHTML = `
+      <div class="goalPopoverRow">
+        <div class="goalPopoverLabel">Результат/метрика</div>
+        <div class="goalPopoverValue">${escapeHtml(metric || "—")}</div>
+      </div>
+      <div class="goalPopoverRow">
+        <div class="goalPopoverLabel">Почему это важно</div>
+        <div class="goalPopoverValue">${escapeHtml(why || "—")}</div>
+      </div>
+      <div class="goalPopoverRow">
+        <div class="goalPopoverLabel">Минимальный шаг</div>
+        <div class="goalPopoverValue">${escapeHtml(minStep || "—")}</div>
+      </div>
+    `;
+  }
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 export function renderGoals(ui, state) {
@@ -518,6 +566,7 @@ export function scrollHistoryToDay(ui, key) {
   const target = entries[0];
   target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
 
 
 
