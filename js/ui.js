@@ -329,18 +329,33 @@ export function renderMandatoryGoal(ui, state) {
       ui.mandatoryGoalPopover.innerHTML = "";
       return;
     }
+    const sections = [
+      {
+        label: "Результат/метрика",
+        value: metric,
+      },
+      {
+        label: "Почему это важно",
+        value: why,
+      },
+    ];
+    if (minStep) {
+      sections.push({
+        label: "Минимальный шаг",
+        value: minStep,
+      });
+    }
+
     ui.mandatoryGoalPopover.innerHTML = `
-      <div class="goalPopoverRow">
-        <div class="goalPopoverLabel">Результат/метрика</div>
-        <div class="goalPopoverValue">${escapeHtml(metric || "—")}</div>
-      </div>
-      <div class="goalPopoverRow">
-        <div class="goalPopoverLabel">Почему это важно</div>
-        <div class="goalPopoverValue">${escapeHtml(why || "—")}</div>
-      </div>
-      <div class="goalPopoverRow">
-        <div class="goalPopoverLabel">Минимальный шаг</div>
-        <div class="goalPopoverValue">${escapeHtml(minStep || "—")}</div>
+      <div class="mgTip">
+        ${sections
+          .map((section) => `
+            <div class="mgTipSection">
+              <div class="mgTipLabel">${escapeHtml(section.label)}</div>
+              <div class="mgTipValue">${escapeHtml(section.value)}</div>
+            </div>
+          `)
+          .join("")}
       </div>
     `;
   }
@@ -569,6 +584,7 @@ export function scrollHistoryToDay(ui, key) {
   const target = entries[0];
   target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
 
 
 
