@@ -1,4 +1,4 @@
-import { computeStreak, dayKey, historyKey, lastActionAt } from "./state.js";
+import { computeStreak, dayKey, historyKey, lastActionAt, daysMapFromHistory } from "./state.js";
 
 export function bindUI() {
   const el = (id) => document.getElementById(id);
@@ -445,7 +445,7 @@ export function renderStreak(ui, state) {
 
   // календарь: последние 28 дней
   ui.calendar.innerHTML = "";
-  const days = new Set(state.history.map(h => dayKey(h.ts)));
+  const days = daysMapFromHistory(state.history);
   const today = new Date();
   // 28 дней, включая сегодня
   for (let i = 27; i >= 0; i--) {
@@ -584,6 +584,7 @@ export function scrollHistoryToDay(ui, key) {
   const target = entries[0];
   target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
 
 
 
