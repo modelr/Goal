@@ -110,8 +110,9 @@ h1{
   display: flex;
   align-items: center;
   gap: 6px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   position: relative;
+  min-width: 0;
 }
 
 .goalSummaryButton{
@@ -127,6 +128,10 @@ h1{
 
 .goalSummaryText{
   color: var(--muted);
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .goalInfoButton{
@@ -865,6 +870,7 @@ button.pill.btn { cursor: pointer; }
 .taskOption input{
   margin: 0;
 }
+
 
 
 
