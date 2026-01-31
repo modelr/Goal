@@ -165,8 +165,6 @@ h1{
   padding: 12px;
   box-shadow: var(--shadow);
   z-index: 30;
-  display: grid;
-  gap: 6px;
 }
 
 [data-theme="light"] .goalPopover{
@@ -191,6 +189,47 @@ h1{
   white-space: pre-wrap;
 }
 
+.mgTip{
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 560px;
+  font-size: 14px;
+}
+
+.mgTipSection{
+  padding: 10px 12px;
+  border-left: 2px solid rgba(53,179,238,.6);
+  background: rgba(53,179,238,.08);
+  border-radius: 12px;
+}
+
+.mgTipLabel{
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(53,179,238,.16);
+  color: rgba(255,255,255,.92);
+}
+
+.mgTipValue{
+  margin-top: 6px;
+  color: rgba(255,255,255,.88);
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+[data-theme="light"] .mgTipLabel{
+  color: #0b2f3d;
+}
+
+[data-theme="light"] .mgTipValue{
+  color: var(--text);
+}
 .top-actions,
 .actions{
   display:flex;
@@ -904,6 +943,7 @@ button.pill.btn { cursor: pointer; }
 .taskOption input{
   margin: 0;
 }
+
 
 
 
