@@ -158,7 +158,7 @@ function isMeaningfulState(state) {
   if (state?.mandatoryGoal?.why) return true;
   if (Array.isArray(state?.dailyGoals)) {
     const goalHasData = state.dailyGoals.some(goal =>
-      (goal?.text && String(goal.text).trim()) |
+      (goal?.text && String(goal.text).trim()) ||
       goal?.doneToday ||
       goal?.isDaily
     );
@@ -168,4 +168,5 @@ function isMeaningfulState(state) {
   if (state?.todayNote && String(state.todayNote).trim()) return true;
   return false;
 }
+
 
