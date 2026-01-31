@@ -904,7 +904,7 @@ function renderSaveTasks(tasks, showTasks) {
 }
 
 let saveTimer = null;
-async function persist() {
+function scheduleSave() {
   if (saving) return;
   if (authFlowInProgress && !authInitTimedOut) {
     pendingSave = true;
@@ -1322,5 +1322,6 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
