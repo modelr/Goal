@@ -483,41 +483,39 @@ function wireEvents() {
     });
   }
 
-    ui.btnLogin.addEventListener("click", async () => {
-    if (!supabase) return toast(ui, "Supabase не настроен (URL/KEY)");
+ui.btnLogin.addEventListener("click", async () => {
+  if (!supabase) return toast(ui, "Supabase не настроен (URL/KEY)");
 
-    const { data } = await supabase.auth.getUser();
-    const isLoggedIn = !!data?.user;
-    setLoginLoading(true, isLoggedIn ? "⏳ Выходим…" : "⏳ Входим…");
-    logAuthStage(isLoggedIn ? "Запрос на выход" : "Запрос на вход");
-    setAuthStage(ui, { text: isLoggedIn ? "Выходим…" : "Входим…", visible: true });
+  const { data } = await supabase.auth.getUser();
+  const isLoggedIn = !!data?.user;
 
-    // Если уже залогинен — делаем "Выйти"
-    const { data } = await supabase.auth.getUser();
-    if (data?.user) {
-      await supabase.auth.signOut();
-      setLoginLoading(false);
-      syncLoginButtonLabel();
-      setAuthStage(ui, { text: "Локально", visible: true });
-      return;
-    }
+  setLoginLoading(true, isLoggedIn ? "⏳ Выходим…" : "⏳ Входим…");
+  logAuthStage(isLoggedIn ? "Запрос на выход" : "Запрос на вход");
+  setAuthStage(ui, { text: isLoggedIn ? "Выходим…" : "Входим…", visible: true });
 
-    // Чистим URL от старых #error...
-    history.replaceState(null, "", window.location.origin + window.location.pathname);
+  if (isLoggedIn) {
+    await supabase.auth.signOut();
+    setLoginLoading(false);
+    syncLoginButtonLabel();
+    setAuthStage(ui, { text: "Локально", visible: true });
+    return;
+  }
 
-    const redirectTo = window.location.origin + window.location.pathname;
+  history.replaceState(null, "", window.location.origin + window.location.pathname);
+  const redirectTo = window.location.origin + window.location.pathname;
 
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo },
-    });
-
-    if (error) {
-      setLoginLoading(false);
-      syncLoginButtonLabel();
-      toast(ui, "Ошибка входа: " + (error.message || String(error)));
-    }
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo },
   });
+
+  if (error) {
+    setLoginLoading(false);
+    syncLoginButtonLabel();
+    toast(ui, "Ошибка входа: " + (error.message || String(error)));
+  }
+});
+
 
 
     // auth modal: close button
@@ -1353,6 +1351,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
