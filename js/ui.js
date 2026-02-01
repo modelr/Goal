@@ -87,11 +87,44 @@ const CLOUD_CHECK_ICON = `
   </svg>
 `;
 
-export function setOnlineBadge(ui, { isDirty, lastSaveOk, saveInProgress }) {
+export function setOnlineBadge(
+  ui,
+  {
+    isDirty,
+    lastSaveOk,
+    saveInProgress,
+    localSaveOk,
+    cloudReady,
+    hasUser,
+  }
+) {
   if (!ui.netBadge) return;
 
   const badge = ui.netBadge;
-  if (isDirty || lastSaveOk !== true || saveInProgress) {
+  if (saveInProgress) {
+    badge.dataset.status = "pending";
+    badge.innerHTML = `<span class="netBadgeIcon">${CLOUD_ICON}</span><span class="netBadgeText">Сохраняем…</span>`;
+    badge.setAttribute("aria-label", "Сохраняем");
+    badge.title = "Сохраняем";
+    return;
+  }
+
+  if (hasUser && !cloudReady) {
+    if (localSaveOk === false) {
+      badge.dataset.status = "pending";
+      badge.innerHTML = `<span class="netBadgeIcon">${CLOUD_ICON}</span><span class="netBadgeText">Не сохранено</span>`;
+      badge.setAttribute("aria-label", "Не сохранено");
+      badge.title = "Локальное сохранение не удалось";
+      return;
+    }
+    badge.dataset.status = "local";
+    badge.innerHTML = `<span class="netBadgeIcon">${CLOUD_CHECK_ICON}</span><span class="netBadgeText">Сохранено локально</span>`;
+    badge.setAttribute("aria-label", "Сохранено локально");
+    badge.title = "Сохранено локально, облако недоступно";
+    return;
+  }
+
+  if (isDirty || lastSaveOk !== true) {
     badge.dataset.status = "pending";
     badge.innerHTML = `<span class="netBadgeIcon">${CLOUD_ICON}</span><span class="netBadgeText">Не сохранено</span>`;
     badge.setAttribute("aria-label", "Не сохранено");
@@ -106,14 +139,22 @@ export function setOnlineBadge(ui, { isDirty, lastSaveOk, saveInProgress }) {
 }
 
 
-export function setModeInfo(ui, mode, user) {
+export function setModeInfo(ui, { mode, user, cloudReady, localSaveOk }) {
   if (user) {
-    ui.modeInfo.textContent = `Облачный режим (Supabase). Пользователь: ${user.email || user.id}`;
+    if (cloudReady) {
+      ui.modeInfo.textContent = `Облачный режим (Supabase). Пользователь: ${user.email || user.id}`;
+      return;
+    }
+    const localStatus = localSaveOk === false
+      ? "Локальное сохранение недоступно"
+      : "Сохраняем локально";
+    ui.modeInfo.textContent = `Оффлайн-режим. ${localStatus}. Пользователь: ${user.email || user.id}`;
     return;
   }
-  ui.modeInfo.textContent = mode === "guest"
-    ? "Гостевой режим (данные привязаны к браузеру)."
-    : "Войдите, чтобы данные сохранялись в облаке.";
+  ui.modeInfo.textContent =
+    mode === "guest"
+      ? "Гостевой режим (данные привязаны к браузеру)."
+      : "Войдите, чтобы данные сохранялись в облаке.";
 }
 
 export function setAuthStage(ui, { text, showRetry = false, visible = true } = {}) {
@@ -584,6 +625,7 @@ export function scrollHistoryToDay(ui, key) {
   const target = entries[0];
   target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
 
 
 
