@@ -65,6 +65,20 @@ let retryTimer = null;
 let retryAttempt = 0;
 const deviceId = getDeviceId();
 
+function withTimeout(promise, ms, label) {
+  let timer = null;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      const err = new Error(label || `timeout after ${ms}ms`);
+      err.name = "AbortError";
+      reject(err);
+    }, ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
+
 boot().catch(err => hardFail(err));
 
 async function boot() {
@@ -375,10 +389,19 @@ function resetAuthInitState() {
 async function getSessionUser() {
   if (!supabase) return null;
   try {
-    const { data, error } = await supabase.auth.getSession();
+    const { data, error } = await withTimeout(
+      supabase.auth.getSession(),
+      AUTH_TIMEOUT_MS,
+      `[auth] getSession timed out after ${AUTH_TIMEOUT_MS}ms.`
+    );
     if (error) return null;
     return data?.session?.user || null;
-  } catch {
+  } catch (err) {
+    if (err?.name === "AbortError") {
+      console.warn(err?.message || `[auth] getSession timed out after ${AUTH_TIMEOUT_MS}ms.`);
+      return null;
+    }
+    console.warn("[auth] getSession failed:", err);
     return null;
   }
 }
@@ -1351,6 +1374,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
