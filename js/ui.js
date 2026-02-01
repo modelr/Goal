@@ -576,7 +576,9 @@ export function renderHistory(ui, state) {
     } else if (e.type === "done_goal") {
       const text = e.payload?.text || "";
       const comment = e.payload?.comment || "";
-      const label = e.payload?.isDaily ? "Сделана ежедневная цель" : "Сделана цель";
+      const isDaily = !!e.payload?.isDaily;
+      const statusLabel = (e.payload?.statusLabel || "").trim();
+      const label = statusLabel || (isDaily ? "Сделана ежедневная цель" : "Сделана цель");
       addLine(body, `${label}:`, `«${text}»`);
       if (comment) {
         addLine(body, "Комментарий:", comment);
@@ -619,6 +621,7 @@ export function scrollHistoryToDay(ui, key) {
   const target = entries[0];
   target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
 
 
 
