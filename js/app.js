@@ -48,7 +48,7 @@ let dataChoiceResolve = null;
 let mandatoryGoalReturnFocusEl = null;
 let deleteGoalReturnFocusEl = null;
 const THEME_KEY = "goal-theme";
-const AUTH_TIMEOUT_MS = 18000;
+const AUTH_TIMEOUT_MS = 60000;
 const AUTH_STATUS_HIDE_DELAY_MS = 2200;
 const SYNC_TOAST_THROTTLE_MS = 8000;
 const RETRY_BASE_DELAY_MS = 2000;
@@ -89,10 +89,12 @@ async function boot() {
   wireEvents();
 
 document.addEventListener("visibilitychange", () => {
-  if (!document.hidden) {
-    // если раньше случился auth timeout или облако деградировало — мягко переинициализируем
-    if (authInitTimedOut || cloudBlockReason === "auth-timeout") {
+  if (document.hidden) return;
+  if (authInitTimedOut || cloudBlockReason === "auth-timeout") {
+    if (navigator.onLine) {
       runAuthInit({ force: true, reason: "tab-visible" });
+    } else {
+      toast(ui, "Нет подключения к интернету");
     }
   }
 });
@@ -356,7 +358,6 @@ function startAuthTimeout() {
     // но помечаем таймаут, чтобы при возврате переинициализировать.
     if (document.hidden) {
       authInitTimedOut = true;
-      cloudBlockReason = "auth-timeout";
       logAuthStage("Auth init timeout while hidden: will retry on tab-visible.");
       updateNetBadge();
       return;
@@ -1374,6 +1375,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
