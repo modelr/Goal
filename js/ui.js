@@ -570,6 +570,9 @@ export function renderHistory(ui, state) {
     const body = document.createElement("div");
     body.className = "histBody";
 
+    if (e.type === "delete_goal") {
+      const text = e.payload?.text || "";
+      addLine(body, "Удалена цель:", `«${text}»`);
     } else if (e.type === "done_goal") {
       const text = e.payload?.text || "";
       const comment = e.payload?.comment || "";
@@ -618,6 +621,7 @@ export function scrollHistoryToDay(ui, key) {
   const target = entries[0];
   target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
 
 
 
