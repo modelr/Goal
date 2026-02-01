@@ -161,20 +161,6 @@ export function completeGoal(s, goalId, { comment = "", keepGoal = false } = {})
   return { ...s, dailyGoals: goals, history: [entry, ...s.history] };
 }
 
-export function addHistorySave(s, options = {}) {
-  const focusGoal = String(options.focusGoal || "");
-  const entry = {
-    ts: nowMs(),
-    type: "save",
-    payload: {
-      note: s.todayNote || "",
-      focusGoal,
-      goals: s.dailyGoals.map(g => ({ text: g.text || "", doneToday: !!g.doneToday })),
-    }
-  };
-  return { ...s, history: [entry, ...s.history] };
-}
-
 export function daysMapFromHistory(history) {
   // засчитываем день, если есть запись, отличная от удаления цели
   const map = new Set();
@@ -213,6 +199,7 @@ export function computeStreak(history) {
 
   return { streak, todayCounted };
 }
+
 
 
 
