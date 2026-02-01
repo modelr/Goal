@@ -368,6 +368,10 @@ function startAuthTimeout() {
     logAuthStage("Auth init timeout (still in progress): retry suggested.");
     setAuthStage(ui, { text: "Обновить", visible: true, showRetry: true });
     updateNetBadge();
+    if (pendingSave && !dataChoicePending) {
+      pendingSave = false;
+      persist();
+    }
   }, AUTH_TIMEOUT_MS);
 }
 
@@ -1375,6 +1379,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
