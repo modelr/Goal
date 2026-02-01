@@ -530,7 +530,8 @@ function wireEvents() {
       const g = state.dailyGoals.find(x => x.id === goalId);
       if (!g) return closeCommentModal();
       const comment = (ui.commentInput?.value || "").trim();
-      state = completeGoal(state, goalId, { comment, keepGoal: !!g.isDaily });
+      const keepGoal = !!g.isDaily || !!ui.commentPartialCheckbox?.checked;
+      state = completeGoal(state, goalId, { comment, keepGoal });
       state = markOpened(state);
       renderAll(ui, state);
       scheduleSave();
@@ -760,6 +761,7 @@ function openCommentModal(goalId) {
   if (!ui.commentModal) return;
   commentModalGoalId = goalId;
   if (ui.commentInput) ui.commentInput.value = "";
+  if (ui.commentPartialCheckbox) ui.commentPartialCheckbox.checked = false;
   ui.commentModal.hidden = false;
   ui.commentModal.classList.add("show");
   if (ui.commentInput) ui.commentInput.focus();
@@ -770,6 +772,7 @@ function closeCommentModal() {
   ui.commentModal.classList.remove("show");
   ui.commentModal.hidden = true;
   commentModalGoalId = null;
+  if (ui.commentPartialCheckbox) ui.commentPartialCheckbox.checked = false;
 }
 
 function openMandatoryGoalModal() {
@@ -1362,6 +1365,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
