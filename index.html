@@ -109,6 +109,18 @@
       </div>
     </div>
 
+    <div class="modalBackdrop" id="deleteGoalModal" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="deleteGoalTitle">
+        <h3 id="deleteGoalTitle">Удалить цель?</h3>
+        <p class="muted">Цель будет удалена из списка и добавлена в историю.</p>
+        <div class="muted small" id="deleteGoalText">—</div>
+        <div class="row">
+          <button class="btn danger" id="deleteGoalConfirmBtn">Удалить</button>
+          <button class="btn" id="deleteGoalCancelBtn">Отмена</button>
+        </div>
+      </div>
+    </div>
+
     <div class="modalBackdrop" id="dataChoiceModal" hidden>
       <div class="modal modalWide modalSplit" role="dialog" aria-modal="true" aria-labelledby="dataChoiceTitle">
         <div class="modalHeader">
@@ -178,4 +190,5 @@
   <script type="module" src="./js/app.js"></script>
 </body>
 </html>
+
 
