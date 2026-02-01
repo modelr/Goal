@@ -808,8 +808,8 @@ async function persist() {
   if (!cloudReady) {
     mode = "local";
     setModeInfo(ui, { mode, user, cloudReady, localSaveOk });
-    isDirty = true;
-    lastSaveOk = false;
+    isDirty = !localSaveOk;
+    lastSaveOk = localSaveOk;
     updateNetBadge();
     showSyncToastOnce("Не удалось синхронизировать. Проверьте вход и нажмите ‘Повторить’.");
     saving = false;
@@ -1211,6 +1211,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
