@@ -313,6 +313,9 @@ h2{
   justify-content:flex-start;
   gap:12px;
 }
+.goalsActions .ttlInfo{
+  margin-left:auto;
+}
 .goalsMeta{
   margin-top: 8px;
 }
@@ -667,9 +670,6 @@ textarea{
   margin-top: 4px;
   margin-bottom: 0;
 }
-.historyCard .ttlRow{
-  margin-top: 6px;
-}
 .historyCard .history{
   flex: 1 1 auto;
   min-height: 0;
@@ -969,6 +969,7 @@ button.pill.btn { cursor: pointer; }
 .taskOption input{
   margin: 0;
 }
+
 
 
 
