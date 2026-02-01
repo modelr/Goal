@@ -77,12 +77,19 @@ async function boot() {
 
   if (supabase && !authListenerAttached) {
     authListenerAttached = true;
-    supabase.auth.onAuthStateChange(async (_event, session) => {
+    supabase.auth.onAuthStateChange(async (event, session) => {
       user = session?.user || null;
       setLoginLoading(false);
       syncLoginButtonLabel();
-      await runAuthInit({ reason: "auth-change" });
-      toast(ui, user ? "Вошли, данные синхронизированы" : "Вышли, гостевой режим");
+      const shouldInit = ["SIGNED_IN", "SIGNED_OUT", "INITIAL_SESSION"].includes(event);
+      if (shouldInit) {
+        await runAuthInit({ reason: `auth-change:${event}` });
+        toast(ui, user ? "Вошли, данные синхронизированы" : "Вышли, гостевой режим");
+        return;
+      }
+      if (event === "TOKEN_REFRESHED") {
+        console.info("[auth] TOKEN_REFRESHED: init skipped");
+      }
     });
   }
 
@@ -164,8 +171,8 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
   try {
     setAuthStage(ui, { text: "Проверяем redirect…", visible: true, showRetry: false });
     await handleAuthRedirect();
-    setAuthStage(ui, { text: "Получаем пользователя…", visible: true, showRetry: false });
-    const sessionUser = await getUserSafe();
+    setAuthStage(ui, { text: "Проверяем сессию…", visible: true, showRetry: false });
+    const sessionUser = await getSessionUser();
     user = sessionUser;
     syncLoginButtonLabel();
     clearAuthTimeout();
@@ -323,12 +330,12 @@ function resetAuthInitState() {
   authInitTimedOut = false;
 }
 
-async function getUserSafe() {
+async function getSessionUser() {
   if (!supabase) return null;
   try {
-    const { data, error } = await supabase.auth.getUser();
+    const { data, error } = await supabase.auth.getSession();
     if (error) return null;
-    return data?.user || null;
+    return data?.session?.user || null;
   } catch {
     return null;
   }
@@ -1355,6 +1362,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
