@@ -110,7 +110,7 @@ export function markOpened(s) {
 }
 
 export function addGoal(s) {
-  const goals = [...s.dailyGoals, { id: uid(), text: "", doneToday: false, isDaily: false }];
+  const goals = [{ id: uid(), text: "", doneToday: false, isDaily: false }, ...s.dailyGoals];
   return { ...s, dailyGoals: goals };
 }
 
@@ -200,6 +200,7 @@ export function computeStreak(history) {
 
   return { streak, todayCounted };
 }
+
 
 
 
