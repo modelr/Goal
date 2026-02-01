@@ -7,6 +7,20 @@ const USER_KEY_PREFIX = "goal_user_";
 const BACKUP_INDEX_PREFIX = "goal_backup_index_";
 const REMOTE_TIMEOUT_MS = 8000;
 
+function withTimeout(promise, ms, label) {
+  let timer = null;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      const err = new Error(label || `timeout after ${ms}ms`);
+      err.name = "AbortError";
+      reject(err);
+    }, ms);
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
+
 export function getDeviceId() {
   try {
     const existing = localStorage.getItem(DEVICE_KEY);
@@ -49,7 +63,6 @@ export async function loadRemoteState(supabase, userId) {
   if (!supabase || !userId) return null;
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REMOTE_TIMEOUT_MS);
 
   try {
     let q = supabase
@@ -63,29 +76,32 @@ export async function loadRemoteState(supabase, userId) {
       q = q.abortSignal(controller.signal);
     }
 
-    const { data, error } = await q;
+    // Гарантируем, что промис не "повиснет" даже если abortSignal не поддерживается
+    const { data, error } = await withTimeout(
+      q,
+      REMOTE_TIMEOUT_MS,
+      `[storage] Remote load timed out after ${REMOTE_TIMEOUT_MS}ms.`
+    ).catch((err) => {
+      // пробуем прервать fetch, если поддерживается
+      try { controller.abort(); } catch {}
+      throw err;
+    });
 
-    if (error) {
-      // Если supabase пробросит AbortError как "error", тоже ок
-      if (error?.name === "AbortError") {
-        console.warn(`[storage] Remote load timed out after ${REMOTE_TIMEOUT_MS}ms.`);
-      }
-      return null;
-    }
-
+    if (error) return null;
     return data ?? null;
   } catch (err) {
     if (err?.name === "AbortError") {
-      console.warn(`[storage] Remote load timed out after ${REMOTE_TIMEOUT_MS}ms.`);
+      console.warn(err?.message || `[storage] Remote load timed out after ${REMOTE_TIMEOUT_MS}ms.`);
+      return null;
     }
+    console.warn("[storage] Remote load failed:", err);
     return null;
-  } finally {
-    clearTimeout(timer);
   }
 }
 
 export async function saveRemoteState(supabase, userId, state, options = {}) {
   if (!supabase || !userId) return { ok: false, reason: "no-user" };
+
   const cached = loadUserStateLocal(userId);
   if (!options.skipGuard && shouldBlockEmptySave(state, cached)) {
     console.warn("[storage] Skip remote save: empty state would overwrite non-empty cache.");
@@ -93,31 +109,40 @@ export async function saveRemoteState(supabase, userId, state, options = {}) {
   }
 
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), REMOTE_TIMEOUT_MS);
+
   try {
     const payload = {
       user_id: userId,
       state,
       updated_at: new Date(nowMs()).toISOString(),
     };
-    const { error } = await supabase
-      .from(SUPABASE.TABLE)
-      .upsert(payload, { onConflict: "user_id" })
-      .abortSignal(controller.signal);
 
-    if (error?.name === "AbortError") {
-      console.warn(`[storage] Remote save timed out after ${REMOTE_TIMEOUT_MS}ms.`);
-      return { ok: false, reason: "timeout" };
+    let q = supabase
+      .from(SUPABASE.TABLE)
+      .upsert(payload, { onConflict: "user_id" });
+
+    if (typeof q.abortSignal === "function") {
+      q = q.abortSignal(controller.signal);
     }
-    return { ok: !error, reason: error ? "remote-error" : null };
+
+    const { error } = await withTimeout(
+      q,
+      REMOTE_TIMEOUT_MS,
+      `[storage] Remote save timed out after ${REMOTE_TIMEOUT_MS}ms.`
+    ).catch((err) => {
+      try { controller.abort(); } catch {}
+      throw err;
+    });
+
+    if (error) return { ok: false, reason: "remote-error" };
+    return { ok: true, reason: null };
   } catch (err) {
     if (err?.name === "AbortError") {
-      console.warn(`[storage] Remote save timed out after ${REMOTE_TIMEOUT_MS}ms.`);
+      console.warn(err?.message || `[storage] Remote save timed out after ${REMOTE_TIMEOUT_MS}ms.`);
       return { ok: false, reason: "timeout" };
     }
+    console.warn("[storage] Remote save failed:", err);
     return { ok: false, reason: "network" };
-  } finally {
-    clearTimeout(timer);
   }
 }
 
@@ -205,6 +230,7 @@ function isMeaningfulState(state) {
   if (state?.todayNote && String(state.todayNote).trim()) return true;
   return false;
 }
+
 
 
 
