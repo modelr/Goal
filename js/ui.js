@@ -41,6 +41,10 @@ export function bindUI() {
     commentPartialCheckbox: el("commentPartialCheckbox"),
     commentSaveBtn: el("commentSaveBtn"),
     commentCancelBtn: el("commentCancelBtn"),
+    deleteGoalModal: el("deleteGoalModal"),
+    deleteGoalText: el("deleteGoalText"),
+    deleteGoalConfirmBtn: el("deleteGoalConfirmBtn"),
+    deleteGoalCancelBtn: el("deleteGoalCancelBtn"),
     dataChoiceModal: el("dataChoiceModal"),
     dataChoiceCloudBtn: el("dataChoiceCloudBtn"),
     dataChoiceLocalBtn: el("dataChoiceLocalBtn"),
@@ -621,3 +625,4 @@ export function scrollHistoryToDay(ui, key) {
     behavior: "smooth",
   });
 }
+
