@@ -610,33 +610,14 @@ export function renderHistory(ui, state) {
 
 export function scrollHistoryToDay(ui, key) {
   if (!ui?.history || !key) return;
-  const entries = ui.history.querySelectorAll(`.histCard[data-day-key="${key}"]`);
-  if (!entries.length) return;
-  const target = entries[0];
-  target.scrollIntoView({ behavior: "smooth", block: "start" });
+  const group = ui.history.querySelector(`.histDay[data-day-key="${key}"]`);
+  const target = group?.querySelector(".histDayTitle");
+  if (!target) return;
+  const containerRect = ui.history.getBoundingClientRect();
+  const targetRect = target.getBoundingClientRect();
+  const offset = targetRect.top - containerRect.top;
+  ui.history.scrollTo({
+    top: ui.history.scrollTop + offset,
+    behavior: "smooth",
+  });
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
