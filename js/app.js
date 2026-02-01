@@ -808,14 +808,15 @@ async function persist() {
   if (!cloudReady) {
     mode = "local";
     setModeInfo(ui, { mode, user, cloudReady, localSaveOk });
-    isDirty = true;
-    lastSaveOk = false;
-    updateNetBadge();
+  isDirty = !localSaveOk;
+  lastSaveOk = localSaveOk;
     showSyncToastOnce("Не удалось синхронизировать. Проверьте вход и нажмите ‘Повторить’.");
-    saving = false;
-    saveInProgress = false;
-    return { ok: false, mode: "local", reason: "cloud-not-ready" };
+  saving = false;
+  saveInProgress = false;
+    updateNetBadge();
+	  return { ok: localSaveOk, mode: "local", reason: "cloud-not-ready" };
   }
+	
   const res = await saveRemoteState(supabase, user.id, state);
   mode = "remote";
   setModeInfo(ui, { mode, user, cloudReady, localSaveOk });
@@ -1211,6 +1212,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
