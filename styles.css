@@ -663,6 +663,13 @@ textarea{
   max-height: 100%;
   min-height: 0;
 }
+.historyCard .progressNote{
+  margin-top: 4px;
+  margin-bottom: 0;
+}
+.historyCard .ttlRow{
+  margin-top: 6px;
+}
 .historyCard .history{
   flex: 1 1 auto;
   min-height: 0;
@@ -962,6 +969,7 @@ button.pill.btn { cursor: pointer; }
 .taskOption input{
   margin: 0;
 }
+
 
 
 
