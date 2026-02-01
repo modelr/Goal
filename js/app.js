@@ -502,7 +502,7 @@ function wireEvents() {
       if (!g) return closeCommentModal();
       const comment = (ui.commentInput?.value || "").trim();
       const isPartial = !!ui.commentPartialCheckbox?.checked;
-      const keepGoal = !!g.isDaily || isPartial;
+      const keepGoal = isPartial;
       const statusLabel = isPartial
         ? (g.isDaily ? "Частично сделана ежедневная цель" : "Частично сделана цель")
         : (g.isDaily ? "Сделана ежедневная цель" : "Сделана цель");
@@ -1216,6 +1216,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
