@@ -48,7 +48,7 @@ let dataChoiceResolve = null;
 let mandatoryGoalReturnFocusEl = null;
 let deleteGoalReturnFocusEl = null;
 const THEME_KEY = "goal-theme";
-const AUTH_TIMEOUT_MS = 60000;
+const AUTH_TIMEOUT_MS = 10000;
 const AUTH_STATUS_HIDE_DELAY_MS = 2200;
 const SYNC_TOAST_THROTTLE_MS = 8000;
 const RETRY_BASE_DELAY_MS = 2000;
@@ -1375,6 +1375,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
