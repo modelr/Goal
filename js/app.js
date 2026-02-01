@@ -43,8 +43,10 @@ let localSaveOk = null;
 let saveInProgress = false;
 let offlineModalShown = false;
 let commentModalGoalId = null;
+let deleteGoalId = null;
 let dataChoiceResolve = null;
 let mandatoryGoalReturnFocusEl = null;
+let deleteGoalReturnFocusEl = null;
 const THEME_KEY = "goal-theme";
 const AUTH_TIMEOUT_MS = 18000;
 const AUTH_STATUS_HIDE_DELAY_MS = 2200;
@@ -420,10 +422,7 @@ function wireEvents() {
       return;
     }
     if (t?.dataset?.role !== "goalDelete") return;
-    state = deleteGoal(state, t.dataset.goalId);
-    state = markOpened(state);
-    renderAll(ui, state);
-    scheduleSave();
+    openDeleteGoalModal(t.dataset.goalId);
   });
 
   ui.btnAddGoal.addEventListener("click", () => {
@@ -538,6 +537,24 @@ function wireEvents() {
     });
   }
 
+  if (ui.deleteGoalConfirmBtn && ui.deleteGoalModal) {
+    ui.deleteGoalConfirmBtn.addEventListener("click", () => {
+      if (!deleteGoalId) return closeDeleteGoalModal();
+      state = deleteGoal(state, deleteGoalId);
+      state = markOpened(state);
+      renderAll(ui, state);
+      scheduleSave();
+      closeDeleteGoalModal();
+    });
+  }
+
+  if (ui.deleteGoalCancelBtn && ui.deleteGoalModal) {
+    ui.deleteGoalCancelBtn.addEventListener("click", () => {
+      closeDeleteGoalModal({ reason: "cancel" });
+    });
+  }
+
+
   if (ui.mandatoryGoalSaveBtn && ui.mandatoryGoalModal) {
     ui.mandatoryGoalSaveBtn.addEventListener("click", () => {
       handleMandatoryGoalSave();
@@ -624,6 +641,14 @@ function wireEvents() {
     });
   }
 
+  if (ui.deleteGoalModal) {
+    ui.deleteGoalModal.addEventListener("click", (e) => {
+      if (e.target === ui.deleteGoalModal) {
+        closeDeleteGoalModal({ reason: "backdrop" });
+      }
+    });
+  }
+
   window.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
     if (ui.mandatoryGoalPopover && !ui.mandatoryGoalPopover.hidden) {
@@ -631,6 +656,9 @@ function wireEvents() {
     }
     if (ui.mandatoryGoalModal?.classList.contains("show")) {
       closeMandatoryGoalModal({ reason: "escape" });
+    }
+    if (ui.deleteGoalModal?.classList.contains("show")) {
+      closeDeleteGoalModal({ reason: "escape" });
     }
   });
 
@@ -681,6 +709,32 @@ function closeCommentModal() {
   ui.commentModal.hidden = true;
   commentModalGoalId = null;
   if (ui.commentPartialCheckbox) ui.commentPartialCheckbox.checked = false;
+}
+
+function openDeleteGoalModal(goalId) {
+  if (!ui.deleteGoalModal) return;
+  const goal = state?.dailyGoals.find((item) => item.id === goalId);
+  deleteGoalId = goalId;
+  deleteGoalReturnFocusEl = document.activeElement;
+  if (ui.deleteGoalText) {
+    ui.deleteGoalText.textContent = goal?.text ? `“${goal.text}”` : "Без названия";
+  }
+  ui.deleteGoalModal.hidden = false;
+  ui.deleteGoalModal.classList.add("show");
+  if (ui.deleteGoalConfirmBtn) ui.deleteGoalConfirmBtn.focus();
+}
+
+function closeDeleteGoalModal({ reason } = {}) {
+  if (!ui.deleteGoalModal) return;
+  ui.deleteGoalModal.classList.remove("show");
+  ui.deleteGoalModal.hidden = true;
+  deleteGoalId = null;
+  if (reason === "backdrop" || reason === "escape" || reason === "cancel") {
+    if (deleteGoalReturnFocusEl && typeof deleteGoalReturnFocusEl.focus === "function") {
+      deleteGoalReturnFocusEl.focus();
+    }
+  }
+  deleteGoalReturnFocusEl = null;
 }
 
 function openMandatoryGoalModal() {
@@ -1276,6 +1330,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
