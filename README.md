@@ -13,7 +13,7 @@
 - При отсутствии соединения показывается оффлайн-режим и предупреждение о несохранённых данных
 
 ## Supabase (рекомендуемая схема)
-Таблица `goal_states`:
+Таблица `goal_state`:
 - user_id uuid primary key references auth.users(id)
 - state jsonb not null
 - updated_at timestamptz not null default now()
@@ -23,5 +23,6 @@ Policies:
 - select: auth.uid() = user_id
 - insert: auth.uid() = user_id
 - update: auth.uid() = user_id
+
 
 
