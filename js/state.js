@@ -132,7 +132,7 @@ export function deleteGoal(s, goalId) {
   return { ...s, dailyGoals: goals.length ? goals : [{ id: uid(), text: "", doneToday: false, isDaily: false }], history };
 }
 
-export function completeGoal(s, goalId, { comment = "", keepGoal = false } = {}) {
+export function completeGoal(s, goalId, { comment = "", keepGoal = false, statusLabel = "" } = {}) {
   const g = s.dailyGoals.find(x => x.id === goalId);
   if (!g) return s;
   const entry = {
@@ -143,6 +143,7 @@ export function completeGoal(s, goalId, { comment = "", keepGoal = false } = {})
       goalId,
       comment: String(comment ?? ""),
       isDaily: !!g.isDaily,
+      statusLabel: String(statusLabel ?? ""),
     },
   };
 
@@ -199,6 +200,7 @@ export function computeStreak(history) {
 
   return { streak, todayCounted };
 }
+
 
 
 
