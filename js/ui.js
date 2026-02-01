@@ -110,6 +110,13 @@ export function setOnlineBadge(
   }
 
   if (hasUser && !cloudReady) {
+    if (isDirty) {
+      badge.dataset.status = "pending";
+      badge.innerHTML = `<span class="netBadgeIcon">${CLOUD_ICON}</span><span class="netBadgeText">Сохраняем…</span>`;
+      badge.setAttribute("aria-label", "Сохраняем");
+      badge.title = "Сохраняем локально";
+      return;
+    }
     if (localSaveOk === false) {
       badge.dataset.status = "pending";
       badge.innerHTML = `<span class="netBadgeIcon">${CLOUD_ICON}</span><span class="netBadgeText">Не сохранено</span>`;
@@ -625,6 +632,7 @@ export function scrollHistoryToDay(ui, key) {
   const target = entries[0];
   target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
 
 
 
