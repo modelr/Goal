@@ -38,11 +38,6 @@
 
       	<div class="row goalsActions">
           <button id="btnAddGoal" class="btn purple">➕ Добавить цель</button>
-          <span class="pill" id="ttlInfo">—</span>
-        </div>
-
-        <div class="row goalsMeta">
-          <span class="pill" id="lastVisit">—</span>
         </div>
 
         <div id="goalsList" class="goals"></div>
@@ -51,12 +46,13 @@
       </section>
 
       <section class="card historyCard" id="historyCard">
-        <h2>Цепочка (streak)</h2>
+        <h2>Прогресс</h2>
         <p class="muted">День засчитывается, если Ты что-то сделал в этот день.</p>
 
         <div class="row">
           <div class="streakNum"><span id="streakCount">0</span> <span class="muted">дней</span></div>
           <span id="todayBadge" class="pill mutedPill">Сегодня ещё не засчитан</span>
+          <span class="pill" id="ttlInfo">—</span>
         </div>
 
         <div id="calendar" class="calendar"></div>
@@ -183,6 +179,7 @@
   <script type="module" src="./js/app.js"></script>
 </body>
 </html>
+
 
 
 
