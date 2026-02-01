@@ -39,6 +39,7 @@ let saving = false;
 let cloudReady = false;
 let isDirty = false;
 let lastSaveOk = null;
+let localSaveOk = null;
 let saveInProgress = false;
 let offlineModalShown = false;
 let saveModalConfirmHandler = null;
@@ -197,7 +198,7 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
 
       state = markOpened(normalizeState(localState));
       mode = "remote";
-      setModeInfo(ui, mode, user);
+      setModeInfo(ui, { mode, user, cloudReady, localSaveOk });
       updateNetBadge();
       renderAll(ui, state);
       scrollToTop();
@@ -216,10 +217,11 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
           lastConflictResolvedAt: Date.now(),
           lastConflictChoice: "cloud",
         };
-        saveGuestState(deviceId, updatedGuest, { skipGuard: true });
-        saveUserStateLocal(user.id, state, { skipGuard: true });
+        const localGuestRes = saveGuestState(deviceId, updatedGuest, { skipGuard: true });
+        const localUserRes = saveUserStateLocal(user.id, state, { skipGuard: true });
+        localSaveOk = !!localGuestRes?.ok && !!localUserRes?.ok;
         isDirty = false;
-        lastSaveOk = true;
+        lastSaveOk = true;;
         toast(ui, "Оставляем облачные данные");
       } else if (choice === "local") {
         if (cloudState) {
@@ -231,8 +233,9 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
           lastConflictResolvedAt: Date.now(),
           lastConflictChoice: "local",
         };
-        saveGuestState(deviceId, updatedLocal, { skipGuard: true });
-        saveUserStateLocal(user.id, state, { skipGuard: true });
+        const localGuestRes = saveGuestState(deviceId, updatedLocal, { skipGuard: true });
+        const localUserRes = saveUserStateLocal(user.id, state, { skipGuard: true });
+        localSaveOk = !!localGuestRes?.ok && !!localUserRes?.ok;
         const res = await saveRemoteState(supabase, user.id, state, { skipGuard: true });
         isDirty = !res.ok;
         lastSaveOk = res.ok;
@@ -250,8 +253,9 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
       isDirty = false;
       lastSaveOk = true;
       if (user) {
-        saveGuestState(deviceId, state);
-        saveUserStateLocal(user.id, state);
+        const localGuestRes = saveGuestState(deviceId, state);
+        const localUserRes = saveUserStateLocal(user.id, state);
+        localSaveOk = !!localGuestRes?.ok && !!localUserRes?.ok;
         if (localHas && !cloudHas) {
           const res = await saveRemoteState(supabase, user.id, state, { skipGuard: true });
           isDirty = !res.ok;
@@ -263,7 +267,7 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
 
     cloudReady = !!user;
     offlineModalShown = false;
-    setModeInfo(ui, mode, user);
+    setModeInfo(ui, { mode, user, cloudReady, localSaveOk });
     updateNetBadge();
     renderAll(ui, state);
     scrollToTop();
@@ -932,8 +936,9 @@ async function persist() {
   saving = true;
   saveInProgress = true;
   const localRes = saveGuestState(deviceId, state);
+  localSaveOk = !!localRes?.ok;
   if (!user) {
-    setModeInfo(ui, "guest", user);
+    setModeInfo(ui, { mode: "guest", user, cloudReady, localSaveOk });
     isDirty = !localRes?.ok;
     lastSaveOk = localRes?.ok || false;
     saving = false;
@@ -942,8 +947,11 @@ async function persist() {
     return { ok: !!localRes?.ok, mode: "guest" };
   }
 
-  saveUserStateLocal(user.id, state);
+  const localUserRes = saveUserStateLocal(user.id, state);
+  localSaveOk = localSaveOk && !!localUserRes?.ok;
   if (!cloudReady) {
+    mode = "local";
+    setModeInfo(ui, { mode, user, cloudReady, localSaveOk });
     isDirty = true;
     lastSaveOk = false;
     updateNetBadge();
@@ -954,7 +962,7 @@ async function persist() {
   }
   const res = await saveRemoteState(supabase, user.id, state);
   mode = "remote";
-  setModeInfo(ui, mode, user);
+  setModeInfo(ui, { mode, user, cloudReady, localSaveOk });
   if (res.ok) {
     isDirty = false;
     lastSaveOk = true;
@@ -1015,7 +1023,10 @@ function updateNetBadge() {
   setOnlineBadge(ui, {
     isDirty,
     lastSaveOk,
-    saveInProgress
+    saveInProgress,
+    localSaveOk,
+    cloudReady,
+    hasUser: !!user
   });
 }
 
@@ -1344,6 +1355,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
