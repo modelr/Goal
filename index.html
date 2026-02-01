@@ -36,8 +36,9 @@
         <h2>Цели на день</h2>
         <p class="muted">Добавляй дневные цели кнопкой “+”. Отмечай выполненные за сегодня (даже частично).</p>
 
-      	<div class="row goalsActions">
+        <div class="row goalsActions">
           <button id="btnAddGoal" class="btn purple">➕ Добавить цель</button>
+          <span class="pill ttlInfo" id="ttlInfo">—</span>
         </div>
 
         <div id="goalsList" class="goals"></div>
@@ -48,11 +49,7 @@
       <section class="card historyCard" id="historyCard">
         <h2>Прогресс</h2>
         <p class="muted progressNote">День засчитывается, если Ты что-то сделал в этот день.</p>
-
-        <div class="row ttlRow">
-          <span class="pill" id="ttlInfo">—</span>
-        </div>
-
+    
         <div class="row">
           <div class="streakNum"><span id="streakCount">0</span> <span class="muted">дней</span></div>
           <span id="todayBadge" class="pill mutedPill">Сегодня ещё не засчитан</span>
@@ -182,29 +179,3 @@
   <script type="module" src="./js/app.js"></script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
