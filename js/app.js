@@ -1,7 +1,7 @@
 import { createSupabaseClient } from "./supabaseClient.js";
 import {
   defaultState, normalizeState, addGoal, deleteGoal,
-  addHistorySave, markOpened, completeGoal,
+  markOpened, completeGoal,
   computeStreak, lastActionAt, deleteHistoryEntry
 } from "./state.js";
 import {
@@ -42,7 +42,6 @@ let lastSaveOk = null;
 let localSaveOk = null;
 let saveInProgress = false;
 let offlineModalShown = false;
-let saveModalConfirmHandler = null;
 let commentModalGoalId = null;
 let dataChoiceResolve = null;
 let mandatoryGoalReturnFocusEl = null;
@@ -415,17 +414,6 @@ function wireEvents() {
     scheduleSave();
   });
 
-  ui.todayNote.addEventListener("input", () => {
-    state.todayNote = ui.todayNote.value;
-    state = markOpened(state);
-    scheduleSave();
-  });
-
-  ui.btnSave.addEventListener("click", () => doSaveEntry());
-  window.addEventListener("keydown", (e) => {
-    if (e.ctrlKey && e.key === "Enter") doSaveEntry();
-  });
-
   if (ui.calendar) {
     ui.calendar.addEventListener("click", (e) => {
       const cell = e.target.closest(".calCell");
@@ -506,23 +494,6 @@ function wireEvents() {
     });
   }
 
-  if (ui.saveConfirmBtn && ui.saveModal) {
-    ui.saveConfirmBtn.addEventListener("click", () => {
-      if (saveModalConfirmHandler) {
-        const handler = saveModalConfirmHandler;
-        saveModalConfirmHandler = null;
-        handler();
-      }
-      closeSaveModal();
-    });
-  }
-
-  if (ui.saveCancelBtn && ui.saveModal) {
-    ui.saveCancelBtn.addEventListener("click", () => {
-      saveModalConfirmHandler = null;
-      closeSaveModal();
-    });
-  }
   if (ui.commentSaveBtn && ui.commentModal) {
     ui.commentSaveBtn.addEventListener("click", () => {
       if (!commentModalGoalId) return closeCommentModal();
@@ -622,14 +593,6 @@ function wireEvents() {
       }
     });
   }
-  if (ui.saveModal) {
-    ui.saveModal.addEventListener("click", (e) => {
-      if (e.target === ui.saveModal) {
-        saveModalConfirmHandler = null;
-        closeSaveModal();
-      }
-    });
-  }
   if (ui.commentModal) {
     ui.commentModal.addEventListener("click", (e) => {
       if (e.target === ui.commentModal) {
@@ -669,92 +632,6 @@ function wireEvents() {
     saveTheme(nextTheme);
     applyTheme(nextTheme);
   });
-}
-
-function doSaveEntry() {
-  const note = ui.todayNote.value.trim();
-  if (!note) {
-    openSaveModal({
-      title: "Нужна отметка",
-      message: "Введите то, что сделали за сегодня в направлении к вашей долгосрочной цели.",
-      showTasks: false,
-      confirmLabel: "Ок",
-      showCancel: false,
-      onConfirm: null,
-    });
-    return;
-  }
-
-  const activeGoals = getActiveGoals(state);
-  openSaveModal({
-    title: "Сохранить запись",
-    message: "Выберите задачу по которой работали Сегодня.",
-    showTasks: true,
-    tasks: activeGoals,
-    confirmLabel: "Сохранить запись",
-    showCancel: true,
-    onConfirm: () => {
-      const selectedGoal = getSelectedGoalText();
-      finalizeSaveEntry({ focusGoal: selectedGoal });
-    },
-  });
-}
-
-function finalizeSaveEntry({ focusGoal }) {
-  state.todayNote = ui.todayNote.value.trim();
-  state = addHistorySave(state, { focusGoal });
-  state.todayNote = "";
-  state = markOpened(state);
-  renderAll(ui, state);
-  markPendingSync();
-  persist().then((res) => {
-    if (!res?.ok) return;
-    if (res.mode === "guest") {
-      toast(ui, "Сохранено локально");
-      return;
-    }
-    toast(ui, "Сохранено");
-  });
-}
-
-function getActiveGoals(s) {
-  return (s?.dailyGoals || [])
-    .map(g => ({ id: g.id, text: String(g.text || "").trim() }))
-    .filter(g => g.text);
-}
-
-function getSelectedGoalText() {
-  if (!ui.saveTaskList) return "";
-  const select = ui.saveTaskList.querySelector("select[name='saveGoal']");
-  return select?.value || "";
-}
-
-function openSaveModal({
-  title,
-  message,
-  showTasks,
-  tasks = [],
-  confirmLabel = "Ок",
-  showCancel = true,
-  onConfirm,
-}) {
-  if (!ui.saveModal) return;
-  if (ui.saveTitle) ui.saveTitle.textContent = title;
-  if (ui.saveMessage) ui.saveMessage.textContent = message;
-  if (ui.saveConfirmBtn) ui.saveConfirmBtn.textContent = confirmLabel;
-  if (ui.saveCancelBtn) ui.saveCancelBtn.hidden = !showCancel;
-
-  renderSaveTasks(tasks, showTasks);
-
-  saveModalConfirmHandler = onConfirm;
-  ui.saveModal.hidden = false;
-  ui.saveModal.classList.add("show");
-}
-
-function closeSaveModal() {
-  if (!ui.saveModal) return;
-  ui.saveModal.classList.remove("show");
-  ui.saveModal.hidden = true;
 }
 
 function openCommentModal(goalId) {
@@ -888,37 +765,6 @@ function setMandatoryGoalPopoverWidth() {
   const maxWidth = viewportWidth - summaryRect.left - 16;
   const width = Math.max(0, Math.min(desiredWidth, maxWidth));
   ui.mandatoryGoalPopover.style.width = `${width}px`;
-}
-
-function renderSaveTasks(tasks, showTasks) {
-  if (!ui.saveTaskList) return;
-  ui.saveTaskList.innerHTML = "";
-  ui.saveTaskList.hidden = !showTasks;
-  if (!showTasks) return;
-
-  if (!tasks.length) {
-    const empty = document.createElement("div");
-    empty.className = "muted small";
-    empty.textContent = "Активных задач нет.";
-    ui.saveTaskList.appendChild(empty);
-    return;
-  }
-
-  const select = document.createElement("select");
-  select.name = "saveGoal";
-  select.className = "modalSelect";
-  select.setAttribute("aria-label", "Выбор задачи");
-
-  tasks.forEach((task, index) => {
-    const option = document.createElement("option");
-    option.value = task.text;
-    option.textContent = task.text;
-    option.dataset.goalId = task.id;
-    if (index === 0) option.selected = true;
-    select.appendChild(option);
-  });
-
-  ui.saveTaskList.appendChild(select);
 }
 
 let saveTimer = null;
@@ -1365,6 +1211,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
