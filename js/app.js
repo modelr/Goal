@@ -501,8 +501,12 @@ function wireEvents() {
       const g = state.dailyGoals.find(x => x.id === goalId);
       if (!g) return closeCommentModal();
       const comment = (ui.commentInput?.value || "").trim();
-      const keepGoal = !!g.isDaily || !!ui.commentPartialCheckbox?.checked;
-      state = completeGoal(state, goalId, { comment, keepGoal });
+      const isPartial = !!ui.commentPartialCheckbox?.checked;
+      const keepGoal = !!g.isDaily || isPartial;
+      const statusLabel = isPartial
+        ? (g.isDaily ? "Частично сделана ежедневная цель" : "Частично сделана цель")
+        : (g.isDaily ? "Сделана ежедневная цель" : "Сделана цель");
+      state = completeGoal(state, goalId, { comment, keepGoal, statusLabel });
       state = markOpened(state);
       renderAll(ui, state);
       scheduleSave();
@@ -1212,6 +1216,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
