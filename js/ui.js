@@ -22,8 +22,6 @@ export function bindUI() {
     lastVisit: el("lastVisit"),
 
     goalsList: el("goalsList"),
-    todayNote: el("todayNote"),
-    btnSave: el("btnSave"),
     modeInfo: el("modeInfo"),
 
     streakCount: el("streakCount"),
@@ -39,12 +37,6 @@ export function bindUI() {
     offlineModal: el("offlineModal"),
     offlineMessage: el("offlineMessage"),
     offlineOkBtn: el("offlineOkBtn"),
-    saveModal: el("saveModal"),
-    saveTitle: el("saveTitle"),
-    saveMessage: el("saveMessage"),
-    saveTaskList: el("saveTaskList"),
-    saveConfirmBtn: el("saveConfirmBtn"),
-    saveCancelBtn: el("saveCancelBtn"),
     commentModal: el("commentModal"),
     commentInput: el("commentInput"),
     commentPartialCheckbox: el("commentPartialCheckbox"),
@@ -263,7 +255,6 @@ export function renderAll(ui, state) {
   renderMeta(ui, state);
   renderMandatoryGoal(ui, state);
   renderGoals(ui, state);
-  renderTodayNote(ui, state);
   renderStreak(ui, state);
   renderHistory(ui, state);
   requestAnimationFrame(() => syncHistoryHeight(ui));
@@ -482,11 +473,6 @@ export function renderGoals(ui, state) {
   });
 }
 
-export function renderTodayNote(ui, state) {
-  if (!ui.todayNote) return;
-  ui.todayNote.value = state.todayNote || "";
-}
-
 export function renderStreak(ui, state) {
   const s = computeStreak(state.history);
   ui.streakCount.textContent = String(s.streak);
@@ -523,7 +509,7 @@ export function renderHistory(ui, state) {
   if (!state.history.length) {
     const p = document.createElement("div");
     p.className = "muted small";
-    p.textContent = "Пока записей нет. Нажми “Сохранить запись”.";
+    p.textContent = "Пока записей нет. Отмечай задачи кнопкой “Сделано сегодня”.";
     ui.history.appendChild(p);
     return;
   }
@@ -633,6 +619,7 @@ export function scrollHistoryToDay(ui, key) {
   const target = entries[0];
   target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
 
 
 
