@@ -19,7 +19,6 @@ export function bindUI() {
 	  
     btnAddGoal: el("btnAddGoal"),
     ttlInfo: el("ttlInfo"),
-    lastVisit: el("lastVisit"),
 
     goalsList: el("goalsList"),
     modeInfo: el("modeInfo"),
@@ -313,11 +312,6 @@ export function syncHistoryHeight(ui) {
 
 
 export function renderMeta(ui, state) {
-  // "Последний визит"
-  const last = state?.lastOpenAt || state?.lastVisitAt || Date.now();
-  const lastStr = new Date(last).toLocaleString("ru-RU");
-  if (ui.lastVisit) ui.lastVisit.textContent = `Последний визит: ${lastStr}`;
-
   // "Удаление через 36ч без действий"
   const TTL_HOURS = 36;
   const ttlMs = TTL_HOURS * 60 * 60 * 1000;
@@ -621,6 +615,7 @@ export function scrollHistoryToDay(ui, key) {
   const target = entries[0];
   target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
 
 
 
