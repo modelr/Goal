@@ -834,6 +834,24 @@ textarea{
 .modalRow{ display: grid; gap: 10px; }
 button.pill.btn { cursor: pointer; }
 
+.commentHint{
+  margin-top: 6px;
+}
+
+.checkboxRow{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text);
+  margin-top: 10px;
+}
+
+.checkboxRow input{
+  width: 16px;
+  height: 16px;
+}
+
 .modalSplit{
   display: flex;
   flex-direction: column;
@@ -944,6 +962,7 @@ button.pill.btn { cursor: pointer; }
 .taskOption input{
   margin: 0;
 }
+
 
 
 
