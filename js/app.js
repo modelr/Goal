@@ -74,6 +74,15 @@ async function boot() {
 
   wireEvents();
 
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) {
+    // если раньше случился auth timeout или облако деградировало — мягко переинициализируем
+    if (authInitTimedOut || cloudBlockReason === "auth-timeout") {
+      runAuthInit({ force: true, reason: "tab-visible" });
+    }
+  }
+});
+	
   await runAuthInit({ reason: "boot" });
 
   updateNetBadge();
@@ -327,14 +336,21 @@ function waitForDataChoice() {
 function startAuthTimeout() {
   clearAuthTimeout();
   authStageTimer = setTimeout(() => {
+    // 1) если init уже закончился — ничего не делаем
+    if (!authFlowInProgress) return;
+
+    // 2) если вкладка скрыта — не “рубим” облако, дождёмся возврата
+    if (document.hidden) return;
+
     authInitTimedOut = true;
-    cloudReady = false;
     cloudBlockReason = "auth-timeout";
-    logAuthStage("Auth init timeout: cloud disabled.");
+    // ВАЖНО: не трогаем cloudReady тут принудительно (иначе ложные “облако отключено”)
+    logAuthStage("Auth init timeout (still in progress): retry suggested.");
     setAuthStage(ui, { text: "Обновить", visible: true, showRetry: true });
     updateNetBadge();
   }, AUTH_TIMEOUT_MS);
 }
+
 
 function clearAuthTimeout() {
   if (authStageTimer) {
@@ -1330,6 +1346,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
