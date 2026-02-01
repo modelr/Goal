@@ -245,7 +245,7 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
         const localUserRes = saveUserStateLocal(user.id, state, { skipGuard: true });
         localSaveOk = !!localGuestRes?.ok && !!localUserRes?.ok;
         isDirty = false;
-        lastSaveOk = true;;
+        lastSaveOk = true;
         toast(ui, "Оставляем облачные данные");
       } else if (choice === "local") {
         if (cloudState) {
@@ -336,20 +336,26 @@ function waitForDataChoice() {
 function startAuthTimeout() {
   clearAuthTimeout();
   authStageTimer = setTimeout(() => {
-    // 1) если init уже закончился — ничего не делаем
     if (!authFlowInProgress) return;
 
-    // 2) если вкладка скрыта — не “рубим” облако, дождёмся возврата
-    if (document.hidden) return;
+    // Если вкладка скрыта — не показываем “Обновить” сейчас,
+    // но помечаем таймаут, чтобы при возврате переинициализировать.
+    if (document.hidden) {
+      authInitTimedOut = true;
+      cloudBlockReason = "auth-timeout";
+      logAuthStage("Auth init timeout while hidden: will retry on tab-visible.");
+      updateNetBadge();
+      return;
+    }
 
     authInitTimedOut = true;
     cloudBlockReason = "auth-timeout";
-    // ВАЖНО: не трогаем cloudReady тут принудительно (иначе ложные “облако отключено”)
     logAuthStage("Auth init timeout (still in progress): retry suggested.");
     setAuthStage(ui, { text: "Обновить", visible: true, showRetry: true });
     updateNetBadge();
   }, AUTH_TIMEOUT_MS);
 }
+
 
 
 function clearAuthTimeout() {
@@ -480,7 +486,8 @@ function wireEvents() {
     ui.btnLogin.addEventListener("click", async () => {
     if (!supabase) return toast(ui, "Supabase не настроен (URL/KEY)");
 
-    const isLoggedIn = ui.btnLogin.textContent.includes("Выйти");
+    const { data } = await supabase.auth.getUser();
+    const isLoggedIn = !!data?.user;
     setLoginLoading(true, isLoggedIn ? "⏳ Выходим…" : "⏳ Входим…");
     logAuthStage(isLoggedIn ? "Запрос на выход" : "Запрос на вход");
     setAuthStage(ui, { text: isLoggedIn ? "Выходим…" : "Входим…", visible: true });
@@ -1346,6 +1353,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
