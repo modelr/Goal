@@ -184,17 +184,18 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
       userLocalState = localRaw ? normalizeState(localRaw) : null;
     }
 
-    const effectiveCloud = cloudState || userLocalState;
-    const guestHas = hasMeaningfulState(guestState);
-    const cloudHas = hasMeaningfulState(effectiveCloud);
+    const localPick = pickLocalState(guestState, userLocalState);
+    const localState = localPick.state;
+    const localHas = hasMeaningfulState(localState);
+    const cloudHas = hasMeaningfulState(cloudState);
 
-    if (user && guestHas && cloudHas && !statesEqual(guestState, effectiveCloud)) {
+    if (user && localHas && cloudHas && !statesEqual(localState, cloudState)) {
       dataChoicePending = true;
-      const diffSections = buildDiffSummary(guestState, effectiveCloud);
+      const diffSections = buildDiffSummary(localState, cloudState);
       renderDiffList(ui, diffSections);
       showDataChoiceModal(ui);
 
-      state = markOpened(normalizeState(guestState));
+      state = markOpened(normalizeState(localState));
       mode = "remote";
       setModeInfo(ui, mode, user);
       updateNetBadge();
@@ -206,10 +207,10 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
       dataChoicePending = false;
 
       if (choice === "cloud") {
-        if (guestState) {
-          backupState("guest", guestState);
+        if (localState) {
+          backupState("local", localState);
         }
-        state = markOpened(normalizeState(effectiveCloud));
+        state = markOpened(normalizeState(cloudState));
         const updatedGuest = {
           ...state,
           lastConflictResolvedAt: Date.now(),
@@ -217,21 +218,14 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
         };
         saveGuestState(deviceId, updatedGuest, { skipGuard: true });
         saveUserStateLocal(user.id, state, { skipGuard: true });
-        if (!cloudState) {
-          const res = await saveRemoteState(supabase, user.id, state, { skipGuard: true });
-          isDirty = !res.ok;
-          lastSaveOk = res.ok;
-          if (!res.ok) showOfflineNotice("Мы оффлайн, данные не сохранятся.");
-        } else {
-          isDirty = false;
-          lastSaveOk = true;
-        }
+        isDirty = false;
+        lastSaveOk = true;
         toast(ui, "Оставляем облачные данные");
       } else if (choice === "local") {
-        if (effectiveCloud) {
-          backupState("cloud", effectiveCloud);
+        if (cloudState) {
+          backupState("cloud", cloudState);
         }
-        state = markOpened(normalizeState(guestState));
+        state = markOpened(normalizeState(localState));
         const updatedLocal = {
           ...state,
           lastConflictResolvedAt: Date.now(),
@@ -247,14 +241,24 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
       }
     } else {
       const finalState = cloudHas
-        ? effectiveCloud
-        : guestHas
-          ? guestState
+        ? cloudState
+        : localHas
+          ? localState
           : defaultState();
       state = markOpened(normalizeState(finalState));
       mode = user ? "remote" : "guest";
       isDirty = false;
       lastSaveOk = true;
+      if (user) {
+        saveGuestState(deviceId, state);
+        saveUserStateLocal(user.id, state);
+        if (localHas && !cloudHas) {
+          const res = await saveRemoteState(supabase, user.id, state, { skipGuard: true });
+          isDirty = !res.ok;
+          lastSaveOk = res.ok;
+          if (!res.ok) showOfflineNotice("Мы оффлайн, данные не сохранятся.");
+        }
+      }
     }
 
     cloudReady = !!user;
@@ -927,8 +931,8 @@ async function persist() {
   if (dataChoicePending) return;
   saving = true;
   saveInProgress = true;
+  const localRes = saveGuestState(deviceId, state);
   if (!user) {
-    const localRes = saveGuestState(deviceId, state);
     setModeInfo(ui, "guest", user);
     isDirty = !localRes?.ok;
     lastSaveOk = localRes?.ok || false;
@@ -1072,6 +1076,24 @@ function hasMeaningfulState(state) {
   if (Array.isArray(state?.history) && state.history.length > 0) return true;
   if (state?.todayNote && String(state.todayNote).trim()) return true;
   return false;
+}
+
+function pickLocalState(guestState, userLocalState) {
+  const guestHas = hasMeaningfulState(guestState);
+  const userHas = hasMeaningfulState(userLocalState);
+  if (guestHas && userHas) {
+    const guestLast = lastActionAt(guestState);
+    const userLast = lastActionAt(userLocalState);
+    if (userLast === guestLast) {
+      return { state: guestState, source: "guest" };
+    }
+    return userLast > guestLast
+      ? { state: userLocalState, source: "user" }
+      : { state: guestState, source: "guest" };
+  }
+  if (guestHas) return { state: guestState, source: "guest" };
+  if (userHas) return { state: userLocalState, source: "user" };
+  return { state: null, source: "none" };
 }
 
 function normalizeForCompare(state) {
@@ -1322,6 +1344,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
