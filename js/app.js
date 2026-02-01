@@ -49,6 +49,8 @@ const THEME_KEY = "goal-theme";
 const AUTH_TIMEOUT_MS = 18000;
 const AUTH_STATUS_HIDE_DELAY_MS = 2200;
 const SYNC_TOAST_THROTTLE_MS = 8000;
+const RETRY_BASE_DELAY_MS = 2000;
+const RETRY_MAX_DELAY_MS = 30000;
 let authListenerAttached = false;
 let authFlowInProgress = false;
 let dataChoicePending = false;
@@ -56,6 +58,9 @@ let pendingSave = false;
 let authStageTimer = null;
 let authInitTimedOut = false;
 let lastSyncToastAt = 0;
+let cloudBlockReason = null;
+let retryTimer = null;
+let retryAttempt = 0;
 const deviceId = getDeviceId();
 
 boot().catch(err => hardFail(err));
@@ -159,6 +164,8 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
   lastSaveOk = null;
   saveInProgress = false;
   isDirty = false;
+  cloudBlockReason = "auth-init";
+  clearRetry();
   dataChoicePending = false;
   hideDataChoiceModal(ui);
   logAuthStage(`Запуск загрузки (${reason})`);
@@ -272,6 +279,10 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
     }
 
     cloudReady = !!user;
+    cloudBlockReason = cloudReady ? null : "no-user";
+    if (!cloudReady) {
+      logAuthStage(`Cloud disabled: ${cloudBlockReason}`);
+    }
     offlineModalShown = false;
     setModeInfo(ui, { mode, user, cloudReady, localSaveOk });
     updateNetBadge();
@@ -288,12 +299,17 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
     console.error(err);
     cloudReady = false;
     lastSaveOk = false;
+    cloudBlockReason = "auth-error";
     setAuthStage(ui, { text: "Обновить", visible: true, showRetry: true });
     updateNetBadge();
   } finally {
     clearAuthTimeout();
     authFlowInProgress = false;
     if (pendingSave && !dataChoicePending) {
+      pendingSave = false;
+      persist();
+    }
+    if (user && (isDirty || pendingSave) && !dataChoicePending) {
       pendingSave = false;
       persist();
     }
@@ -311,6 +327,8 @@ function startAuthTimeout() {
   authStageTimer = setTimeout(() => {
     authInitTimedOut = true;
     cloudReady = false;
+    cloudBlockReason = "auth-timeout";
+    logAuthStage("Auth init timeout: cloud disabled.");
     setAuthStage(ui, { text: "Обновить", visible: true, showRetry: true });
     updateNetBadge();
   }, AUTH_TIMEOUT_MS);
@@ -327,6 +345,7 @@ function resetAuthInitState() {
   clearAuthTimeout();
   authFlowInProgress = false;
   authInitTimedOut = false;
+  cloudBlockReason = null;
 }
 
 async function getSessionUser() {
@@ -615,6 +634,14 @@ function wireEvents() {
     }
   });
 
+  window.addEventListener("online", () => {
+    logAuthStage("Network online: attempting sync.");
+    updateNetBadge();
+    if (user && isDirty) {
+      persist();
+    }
+  });
+
   document.addEventListener("click", (e) => {
     if (!ui.mandatoryGoalPopover || ui.mandatoryGoalPopover.hidden) return;
     if (ui.mandatoryGoalPopover.contains(e.target)) return;
@@ -785,6 +812,26 @@ function scheduleSave() {
   saveTimer = setTimeout(() => persist(), 350);
 }
 
+function scheduleRetry(reason) {
+  if (retryTimer) return;
+  retryAttempt += 1;
+  const delay = Math.min(RETRY_BASE_DELAY_MS * (2 ** (retryAttempt - 1)), RETRY_MAX_DELAY_MS);
+  logAuthStage(`Запланирован повтор синка через ${delay}мс. Причина: ${reason}`);
+  retryTimer = setTimeout(() => {
+    retryTimer = null;
+    if (!user || !isDirty || saving || authFlowInProgress || dataChoicePending) return;
+    persist();
+  }, delay);
+}
+
+function clearRetry() {
+  retryAttempt = 0;
+  if (retryTimer) {
+    clearTimeout(retryTimer);
+    retryTimer = null;
+  }
+}
+
 async function persist() {
   if (saving) return;
   if (authFlowInProgress && !authInitTimedOut) {
@@ -809,29 +856,39 @@ async function persist() {
 
   const localUserRes = saveUserStateLocal(user.id, state);
   localSaveOk = localSaveOk && !!localUserRes?.ok;
-  if (!cloudReady) {
+  const canAttemptRemote = cloudReady || authInitTimedOut;
+  if (!canAttemptRemote) {
     mode = "local";
     setModeInfo(ui, { mode, user, cloudReady, localSaveOk });
-  isDirty = !localSaveOk;
-  lastSaveOk = localSaveOk;
+    isDirty = !localSaveOk;
+    lastSaveOk = localSaveOk;
+    cloudBlockReason = cloudBlockReason || "cloud-not-ready";
     showSyncToastOnce("Не удалось синхронизировать. Проверьте вход и нажмите ‘Повторить’.");
-  saving = false;
-  saveInProgress = false;
+    saving = false;
+    saveInProgress = false;
     updateNetBadge();
-	  return { ok: localSaveOk, mode: "local", reason: "cloud-not-ready" };
+    scheduleRetry(cloudBlockReason);
+    return { ok: localSaveOk, mode: "local", reason: "cloud-not-ready" };
   }
-	
+
+  if (!cloudReady && authInitTimedOut) {
+    logAuthStage("Cloud not ready after auth timeout: пытаемся сохранить в облако.");
+  }
+
   const res = await saveRemoteState(supabase, user.id, state);
   mode = "remote";
   setModeInfo(ui, { mode, user, cloudReady, localSaveOk });
   if (res.ok) {
     isDirty = false;
     lastSaveOk = true;
+    cloudBlockReason = null;
+    clearRetry();
   } else {
     isDirty = true;
     lastSaveOk = false;
     showOfflineNotice("Мы оффлайн, данные не сохранятся.");
     showSyncToastOnce("Не удалось синхронизировать. Проверьте вход и нажмите ‘Повторить’.");
+    scheduleRetry(res.reason || "remote-save-failed");
   }
   saving = false;
   saveInProgress = false;
@@ -875,6 +932,9 @@ function debug(msg, obj) {
 function markPendingSync() {
   isDirty = true;
   if (user && !cloudReady) {
+    if (cloudBlockReason) {
+      logAuthStage(`Cloud blocked: ${cloudBlockReason}`);
+    }
     showSyncToastOnce("Не удалось синхронизировать. Проверьте вход и нажмите ‘Повторить’.");
   }
   updateNetBadge();
@@ -1216,6 +1276,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
