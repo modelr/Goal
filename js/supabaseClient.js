@@ -17,5 +17,12 @@ export function createSupabaseClient() {
     throw new Error("Supabase не настроен (URL/KEY)");
   }
 
-  return window.supabase.createClient(url, key);
+  return window.supabase.createClient(url, key, {
+    auth: {
+      autoRefreshToken: true,
+      persistSession: true,
+      detectSessionInUrl: true,
+    },
+  });
 }
+
