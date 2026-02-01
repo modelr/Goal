@@ -47,6 +47,7 @@ export function bindUI() {
     saveCancelBtn: el("saveCancelBtn"),
     commentModal: el("commentModal"),
     commentInput: el("commentInput"),
+    commentPartialCheckbox: el("commentPartialCheckbox"),
     commentSaveBtn: el("commentSaveBtn"),
     commentCancelBtn: el("commentCancelBtn"),
     dataChoiceModal: el("dataChoiceModal"),
@@ -632,6 +633,7 @@ export function scrollHistoryToDay(ui, key) {
   const target = entries[0];
   target.scrollIntoView({ behavior: "smooth", block: "start" });
 }
+
 
 
 
