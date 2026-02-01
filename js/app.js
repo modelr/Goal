@@ -88,16 +88,17 @@ async function boot() {
 
   wireEvents();
 
-document.addEventListener("visibilitychange", () => {
-  if (document.hidden) return;
-  if (authInitTimedOut || cloudBlockReason === "auth-timeout") {
-    if (navigator.onLine) {
-      runAuthInit({ force: true, reason: "tab-visible" });
-    } else {
-      toast(ui, "Нет подключения к интернету");
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) return;
+    const shouldForce = authInitTimedOut || cloudBlockReason === "auth-timeout";
+    if (shouldForce) {
+      if (navigator.onLine) {
+        runAuthInit({ force: true, reason: "tab-visible" });
+      } else {
+        toast(ui, "Нет подключения к интернету");
+      }
     }
-  }
-});
+  });
 	
   await runAuthInit({ reason: "boot" });
 
@@ -366,6 +367,7 @@ function startAuthTimeout() {
     authInitTimedOut = true;
     cloudBlockReason = "auth-timeout";
     logAuthStage("Auth init timeout (still in progress): retry suggested.");
+    authFlowInProgress = false;
     setAuthStage(ui, { text: "Обновить", visible: true, showRetry: true });
     updateNetBadge();
     if (pendingSave && !dataChoicePending) {
@@ -714,6 +716,11 @@ ui.btnLogin.addEventListener("click", async () => {
   window.addEventListener("online", () => {
     logAuthStage("Network online: attempting sync.");
     updateNetBadge();
+    const shouldForce = authInitTimedOut || cloudBlockReason === "auth-timeout";
+    if (shouldForce) {
+      runAuthInit({ force: true, reason: "online" });
+      return;
+    }
     if (user && isDirty) {
       persist();
     }
@@ -1379,6 +1386,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
