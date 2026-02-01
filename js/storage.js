@@ -47,27 +47,36 @@ export function saveUserStateLocal(userId, state, options = {}) {
 
 export async function loadRemoteState(supabase, userId) {
   if (!supabase || !userId) return null;
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REMOTE_TIMEOUT_MS);
+
   try {
-    const { data, error } = await supabase
+    let q = supabase
       .from(SUPABASE.TABLE)
       .select("state, updated_at")
       .eq("user_id", userId)
-      .maybeSingle()
-      .abortSignal(controller.signal);
+      .maybeSingle();
+
+    // abortSignal есть не во всех сборках/версиях
+    if (typeof q.abortSignal === "function") {
+      q = q.abortSignal(controller.signal);
+    }
+
+    const { data, error } = await q;
 
     if (error) {
+      // Если supabase пробросит AbortError как "error", тоже ок
       if (error?.name === "AbortError") {
         console.warn(`[storage] Remote load timed out after ${REMOTE_TIMEOUT_MS}ms.`);
       }
       return null;
     }
-    return data || null;
+
+    return data ?? null;
   } catch (err) {
     if (err?.name === "AbortError") {
       console.warn(`[storage] Remote load timed out after ${REMOTE_TIMEOUT_MS}ms.`);
-      return null;
     }
     return null;
   } finally {
@@ -196,6 +205,7 @@ function isMeaningfulState(state) {
   if (state?.todayNote && String(state.todayNote).trim()) return true;
   return false;
 }
+
 
 
 
