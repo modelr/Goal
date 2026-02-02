@@ -513,71 +513,46 @@ function wireEvents() {
     });
   }
 
-  ui.btnLogin.addEventListener("click", async () => {
-    if (!supabase) return toast(ui, "Supabase не настроен (URL/KEY)");
+ui.btnLogin.addEventListener("click", async () => {
+  if (!supabase) return toast(ui, "Supabase не настроен (URL/KEY)");
 
-    let userData = null;
-    try {
-      const { data, error } = await withTimeout(
-        supabase.auth.getUser(),
-        AUTH_TIMEOUT_MS,
-        `[auth] getUser timed out after ${AUTH_TIMEOUT_MS}ms.`
-      );
-      if (error) {
-        toast(ui, "Ошибка проверки пользователя: " + (error.message || String(error)));
-        return;
-      }
-      userData = data?.user || null;
-    } catch (err) {
-      if (err?.name === "AbortError") {
-        toast(ui, "Таймаут проверки пользователя. Повторите попытку.");
-        return;
-      }
-      console.warn("[auth] getUser failed:", err);
-      toast(ui, "Ошибка проверки пользователя. Повторите попытку.");
-      return;
-    }
+  const { data } = await supabase.auth.getUser();
+  const isLoggedIn = !!data?.user;
 
-    const isLoggedIn = !!userData;
+  setLoginLoading(true, isLoggedIn ? "⏳ Выходим…" : "⏳ Входим…");
+  logAuthStage(isLoggedIn ? "Запрос на выход" : "Запрос на вход");
+  setAuthStage(ui, { text: isLoggedIn ? "Выходим…" : "Входим…", visible: true });
 
-    if (!isLoggedIn) {
-      openAuthModal();
-      return;
-    }
-
-    setLoginLoading(true, "⏳ Выходим…");
-    logAuthStage("Запрос на выход");
-    setAuthStage(ui, { text: "Выходим…", visible: true });
-
-    try {
-      await withTimeout(
-        supabase.auth.signOut(),
-        AUTH_TIMEOUT_MS,
-        `[auth] signOut timed out after ${AUTH_TIMEOUT_MS}ms.`
-      );
-    } catch (err) {
-      setLoginLoading(false);
-      syncLoginButtonLabel();
-      if (err?.name === "AbortError") {
-        toast(ui, "Таймаут выхода. Повторите попытку.");
-      } else {
-        console.warn("[auth] signOut failed:", err);
-        toast(ui, "Ошибка выхода. Повторите попытку.");
-      }
-      setAuthStage(ui, { text: "Ошибка выхода", visible: true });
-      return;
-    }
+  if (isLoggedIn) {
+    await supabase.auth.signOut();
     setLoginLoading(false);
     syncLoginButtonLabel();
     setAuthStage(ui, { text: "Локально", visible: true });
+    return;
+  }
+
+  history.replaceState(null, "", window.location.origin + window.location.pathname);
+  const redirectTo = window.location.origin + window.location.pathname;
+
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: { redirectTo },
   });
+
+  if (error) {
+    setLoginLoading(false);
+    syncLoginButtonLabel();
+    toast(ui, "Ошибка входа: " + (error.message || String(error)));
+  }
+});
 
 
 
     // auth modal: close button
   if (ui.closeAuthBtn && ui.authModal) {
     ui.closeAuthBtn.addEventListener("click", () => {
-      closeAuthModal();
+      ui.authModal.classList.remove("show");
+      ui.authModal.hidden = true;
     });
   }
 
@@ -693,12 +668,13 @@ function wireEvents() {
   // click on backdrop closes modal
 
   if (ui.authModal) {
-    ui.authModal.addEventListener("click", (e) => {
-      if (e.target === ui.authModal) {
-        closeAuthModal({ reason: "backdrop" });
-      }
-    });
-  }
+  ui.authModal.addEventListener("click", (e) => {
+    if (e.target === ui.authModal) {
+      ui.authModal.classList.remove("show");
+      ui.authModal.hidden = true;
+    }
+  });
+}
 
   if (ui.offlineModal) {
     ui.offlineModal.addEventListener("click", (e) => {
@@ -764,28 +740,13 @@ function wireEvents() {
       }
     });
   }
-  ui.btnTheme.addEventListener("click", () => {
+ ui.btnTheme.addEventListener("click", () => {
     const nextTheme = document.documentElement.getAttribute("data-theme") === "light"
       ? "dark"
       : "light";
     saveTheme(nextTheme);
     applyTheme(nextTheme);
   });
-}
-
-function openAuthModal() {
-  if (!ui.authModal) return;
-  if (ui.authStatus) ui.authStatus.textContent = "—";
-  if (ui.authEmail) ui.authEmail.value = "";
-  ui.authModal.hidden = false;
-  ui.authModal.classList.add("show");
-  if (ui.authEmail) ui.authEmail.focus();
-}
-
-function closeAuthModal() {
-  if (!ui.authModal) return;
-  ui.authModal.classList.remove("show");
-  ui.authModal.hidden = true;
 }
 
 function openCommentModal(goalId) {
@@ -1425,8 +1386,6 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
-
-
 
 
 
