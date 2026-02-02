@@ -516,15 +516,53 @@ function wireEvents() {
 ui.btnLogin.addEventListener("click", async () => {
   if (!supabase) return toast(ui, "Supabase не настроен (URL/KEY)");
 
-  const { data } = await supabase.auth.getUser();
-  const isLoggedIn = !!data?.user;
+  let userData = null;
+  try {
+    const { data, error } = await withTimeout(
+      supabase.auth.getUser(),
+      AUTH_TIMEOUT_MS,
+      `[auth] getUser timed out after ${AUTH_TIMEOUT_MS}ms.`
+    );
+    if (error) {
+      toast(ui, "Ошибка проверки пользователя: " + (error.message || String(error)));
+      return;
+    }
+    userData = data?.user || null;
+  } catch (err) {
+    if (err?.name === "AbortError") {
+      toast(ui, "Таймаут проверки пользователя. Повторите попытку.");
+      return;
+    }
+    console.warn("[auth] getUser failed:", err);
+    toast(ui, "Ошибка проверки пользователя. Повторите попытку.");
+    return;
+  }
+
+  const isLoggedIn = !!userData;
 
   setLoginLoading(true, isLoggedIn ? "⏳ Выходим…" : "⏳ Входим…");
   logAuthStage(isLoggedIn ? "Запрос на выход" : "Запрос на вход");
   setAuthStage(ui, { text: isLoggedIn ? "Выходим…" : "Входим…", visible: true });
 
   if (isLoggedIn) {
-    await supabase.auth.signOut();
+    try {
+      await withTimeout(
+        supabase.auth.signOut(),
+        AUTH_TIMEOUT_MS,
+        `[auth] signOut timed out after ${AUTH_TIMEOUT_MS}ms.`
+      );
+    } catch (err) {
+      setLoginLoading(false);
+      syncLoginButtonLabel();
+      if (err?.name === "AbortError") {
+        toast(ui, "Таймаут выхода. Повторите попытку.");
+      } else {
+        console.warn("[auth] signOut failed:", err);
+        toast(ui, "Ошибка выхода. Повторите попытку.");
+      }
+      setAuthStage(ui, { text: "Ошибка выхода", visible: true });
+      return;
+    }
     setLoginLoading(false);
     syncLoginButtonLabel();
     setAuthStage(ui, { text: "Локально", visible: true });
@@ -1386,6 +1424,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
