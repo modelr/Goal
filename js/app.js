@@ -539,14 +539,21 @@ ui.btnLogin.addEventListener("click", async () => {
         `[auth] getUser timed out after ${AUTH_TIMEOUT_MS}ms.`
       );
       if (error) {
-        console.warn("[auth] getUser error:", error);
-        setLoginLoading(false);
-        syncLoginButtonLabel();
-        setAuthStage(ui, { text: "Ошибка проверки пользователя", visible: true });
-        toast(ui, "Ошибка проверки пользователя. Повторите попытку.");
-        return;
+        const isNoSession =
+          error?.name === "AuthSessionMissingError" ||
+          /auth session missing/i.test(error?.message || "");
+        if (!isNoSession) {
+          console.warn("[auth] getUser error:", error);
+          setLoginLoading(false);
+          syncLoginButtonLabel();
+          setAuthStage(ui, { text: "Ошибка проверки пользователя", visible: true });
+          toast(ui, "Ошибка проверки пользователя. Повторите попытку.");
+          return;
+        }
+        authUser = null;
+      } else {
+        authUser = data?.user || null;
       }
-      authUser = data?.user || null;
     } catch (err) {
       if (err?.name !== "AbortError") {
         console.warn("[auth] getUser failed:", err);
@@ -1482,6 +1489,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
