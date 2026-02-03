@@ -63,6 +63,9 @@ let lastSyncToastAt = 0;
 let cloudBlockReason = null;
 let retryTimer = null;
 let retryAttempt = 0;
+let loginActionInProgress = false;
+let loginAttemptId = 0;
+let oauthFallbackTimer = null;
 const deviceId = getDeviceId();
 
 function withTimeout(promise, ms, label) {
@@ -515,34 +518,127 @@ function wireEvents() {
 
 ui.btnLogin.addEventListener("click", async () => {
   if (!supabase) return toast(ui, "Supabase не настроен (URL/KEY)");
-
-  const { data } = await supabase.auth.getUser();
-  const isLoggedIn = !!data?.user;
-
-  setLoginLoading(true, isLoggedIn ? "⏳ Выходим…" : "⏳ Входим…");
-  logAuthStage(isLoggedIn ? "Запрос на выход" : "Запрос на вход");
-  setAuthStage(ui, { text: isLoggedIn ? "Выходим…" : "Входим…", visible: true });
-
-  if (isLoggedIn) {
-    await supabase.auth.signOut();
-    setLoginLoading(false);
-    syncLoginButtonLabel();
-    setAuthStage(ui, { text: "Локально", visible: true });
-    return;
+  if (loginActionInProgress) return;
+  loginActionInProgress = true;
+  const attemptId = ++loginAttemptId;
+  if (oauthFallbackTimer) {
+    clearTimeout(oauthFallbackTimer);
+    oauthFallbackTimer = null;
   }
+  let oauthStarted = false;
 
-  history.replaceState(null, "", window.location.origin + window.location.pathname);
-  const redirectTo = window.location.origin + window.location.pathname;
+  try {
+    setLoginLoading(true, "⏳ Проверяем…");
+    setAuthStage(ui, { text: "Проверяем…", visible: true });
 
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: { redirectTo },
-  });
+    let authUser = null;
+    try {
+      const { data, error } = await withTimeout(
+        supabase.auth.getUser(),
+        AUTH_TIMEOUT_MS,
+        `[auth] getUser timed out after ${AUTH_TIMEOUT_MS}ms.`
+      );
+      if (error) {
+        console.warn("[auth] getUser error:", error);
+        setLoginLoading(false);
+        syncLoginButtonLabel();
+        setAuthStage(ui, { text: "Ошибка проверки пользователя", visible: true });
+        toast(ui, "Ошибка проверки пользователя. Повторите попытку.");
+        return;
+      }
+      authUser = data?.user || null;
+    } catch (err) {
+      if (err?.name !== "AbortError") {
+        console.warn("[auth] getUser failed:", err);
+      }
+      setLoginLoading(false);
+      syncLoginButtonLabel();
+      setAuthStage(ui, { text: "Ошибка проверки пользователя", visible: true });
+      if (err?.name === "AbortError") {
+        toast(ui, "Таймаут проверки пользователя. Повторите попытку.");
+        return;
+      }
+      toast(ui, "Ошибка проверки пользователя. Повторите попытку.");
+      return;
+    }
 
-  if (error) {
-    setLoginLoading(false);
-    syncLoginButtonLabel();
-    toast(ui, "Ошибка входа: " + (error.message || String(error)));
+    const isLoggedIn = !!authUser;
+
+    setLoginLoading(true, isLoggedIn ? "⏳ Выходим…" : "⏳ Входим…");
+    logAuthStage(isLoggedIn ? "Запрос на выход" : "Запрос на вход");
+    setAuthStage(ui, { text: isLoggedIn ? "Выходим…" : "Входим…", visible: true });
+
+    if (isLoggedIn) {
+      try {
+        const { error } = await withTimeout(
+          supabase.auth.signOut(),
+          AUTH_TIMEOUT_MS,
+          `[auth] signOut timed out after ${AUTH_TIMEOUT_MS}ms.`
+        );
+        if (error) {
+          throw error;
+        }
+      } catch (err) {
+        if (err?.name !== "AbortError") {
+          console.warn("[auth] signOut failed:", err);
+        }
+        setLoginLoading(false);
+        syncLoginButtonLabel();
+        setAuthStage(ui, { text: "Ошибка выхода", visible: true });
+        if (err?.name === "AbortError") {
+          toast(ui, "Таймаут выхода. Повторите попытку.");
+          return;
+        }
+        toast(ui, "Ошибка выхода. Повторите попытку.");
+        return;
+      }
+      setLoginLoading(false);
+      syncLoginButtonLabel();
+      user = null;
+      cloudReady = false;
+      mode = "guest";
+      cloudBlockReason = null;
+      authInitTimedOut = false;
+      authFlowInProgress = false;
+      clearRetry();
+      dataChoicePending = false;
+      pendingSave = false;
+      setModeInfo(ui, { mode, user, cloudReady, localSaveOk });
+      updateNetBadge();
+      setAuthStage(ui, { text: "Локально", visible: true });
+      return;
+    }
+
+    const redirectTo = window.location.origin + window.location.pathname;
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo },
+    });
+
+    if (error) {
+      setLoginLoading(false);
+      syncLoginButtonLabel();
+      setAuthStage(ui, { text: "Ошибка входа", visible: true });
+      toast(ui, "Ошибка входа: " + (error.message || String(error)));
+      return;
+    }
+
+    oauthStarted = true;
+    oauthFallbackTimer = setTimeout(() => {
+      const isStale = attemptId !== loginAttemptId;
+      oauthFallbackTimer = null;
+      if (isStale) return;
+      loginActionInProgress = false;
+      setLoginLoading(false);
+      syncLoginButtonLabel();
+      setAuthStage(ui, { text: "Ожидаем вход…", visible: true });
+    }, 2500);
+    return;
+  } finally {
+    if (!oauthStarted) {
+      loginActionInProgress = false;
+    }
   }
 });
 
@@ -1386,6 +1482,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
