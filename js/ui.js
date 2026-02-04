@@ -236,7 +236,21 @@ export function renderDiffList(ui, sections = []) {
         if (item?.type === "goal-change") {
           renderGoalDiff(li, item);
         } else {
-          li.textContent = item;
+          const text = String(item);
+          const html = text
+            .replaceAll(
+              "на облаке",
+              '<span class="histPrefix">на облаке</span>',
+            )
+            .replaceAll(
+              "в облаке",
+              '<span class="histPrefix">в облаке</span>',
+            )
+            .replaceAll(
+              "локально",
+              '<span class="histPrefix">локально</span>',
+            );
+          li.innerHTML = html;
         }
         list.appendChild(li);
       });
@@ -647,5 +661,6 @@ export function scrollHistoryToDay(ui, key) {
     behavior: "smooth",
   });
 }
+
 
 
