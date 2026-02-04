@@ -692,7 +692,7 @@ textarea{
   flex-direction: column;
   gap: 10px;
   margin-top: 10px;
-  max-height: none;
+  max-height: 460px;
   overflow:auto;
   padding-right: 4px;
   flex: 1 1 auto;
@@ -1016,6 +1016,7 @@ button.pill.btn { cursor: pointer; }
 .taskOption input{
   margin: 0;
 }
+
 
 
 
