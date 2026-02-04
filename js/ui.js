@@ -66,33 +66,10 @@ export function bindUI() {
   };
 }
 
-export  toast(ui, msg, ms = 2000) {
+export function toast(ui, msg, ms = 2000) {
   ui.toast.textContent = msg;
   ui.toast.hidden = false;
   setTimeout(() => (ui.toast.hidden = true), ms);
-}
-
-const CLOUD_LOCAL_REGEX =
-  /(^|[^A-Za-zА-Яа-яЁё0-9_])(на\s+облаке|в\s+облаке|облако|на\s+локально|в\s+локально|локально)([^A-Za-zА-Яа-яЁё0-9_]|$)/gi;
-
-function escapeHtml(value) {
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
-export  formatCloudLocalHighlight(text) {
-  if (text == null) return "";
-  const raw = String(text);
-  const escaped = escapeHtml(raw);
-  return escaped.replace(CLOUD_LOCAL_REGEX, (match, prefix, status, suffix) => {
-    const isLocal = /локал/i.test(status);
-    const className = isLocal ? "histPrefix histLocal" : "histPrefix histCloud";
-    return `${prefix}<span class="${className}">${status}</span>${suffix}`;
-  });
 }
 
 const CLOUD_ICON = `
@@ -107,7 +84,7 @@ const CLOUD_CHECK_ICON = `
   </svg>
 `;
 
-export  setOnlineBadge(
+export function setOnlineBadge(
   ui,
   {
     isDirty,
@@ -166,7 +143,7 @@ export  setOnlineBadge(
 }
 
 
-export  setModeInfo(ui, { mode, user, cloudReady, localSaveOk }) {
+export function setModeInfo(ui, { mode, user, cloudReady, localSaveOk }) {
   if (user) {
     if (cloudReady) {
       ui.modeInfo.textContent = `Облачный режим (Supabase). Пользователь: ${user.email || user.id}`;
@@ -259,7 +236,7 @@ export function renderDiffList(ui, sections = []) {
         if (item?.type === "goal-change") {
           renderGoalDiff(li, item);
         } else {
-          li.innerHTML = formatCloudLocalHighlight(item);
+          li.textContent = item;
         }
         list.appendChild(li);
       });
@@ -432,6 +409,15 @@ export function renderMandatoryGoal(ui, state) {
   }
 }
 
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export function renderGoals(ui, state) {
   ui.goalsList.innerHTML = "";
   const hasNoGoals = state.dailyGoals.length === 0;
@@ -554,7 +540,7 @@ export function renderHistory(ui, state) {
     const line = document.createElement("div");
     line.className = "histLine";
     const prefixSpan = document.createElement("span");
-	prefixSpan.className = "histHistoryPrefix";
+    prefixSpan.className = "histPrefix";
     prefixSpan.textContent = prefix;
     line.appendChild(prefixSpan);
     if (text) {
@@ -661,8 +647,5 @@ export function scrollHistoryToDay(ui, key) {
     behavior: "smooth",
   });
 }
-
-
-
 
 
