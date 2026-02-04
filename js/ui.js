@@ -75,7 +75,7 @@ export function toast(ui, msg, ms = 2000) {
 const CLOUD_LOCAL_REGEX =
   /(^|[^A-Za-zА-Яа-яЁё0-9_])(на\s+облаке|в\s+облаке|облако|на\s+локально|в\s+локально|локально)([^A-Za-zА-Яа-яЁё0-9_]|$)/gi;
 
-function escapeHtml(value) {
+
   return String(value)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -432,15 +432,6 @@ export function renderMandatoryGoal(ui, state) {
   }
 }
 
-function escapeHtml(value) {
-  return String(value)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
-
 export function renderGoals(ui, state) {
   ui.goalsList.innerHTML = "";
   const hasNoGoals = state.dailyGoals.length === 0;
@@ -670,6 +661,7 @@ export function scrollHistoryToDay(ui, key) {
     behavior: "smooth",
   });
 }
+
 
 
 
