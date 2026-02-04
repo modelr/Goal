@@ -6,9 +6,11 @@ import {
 } from "./state.js";
 import {
   getDeviceId,
+  loadActiveArea,
   loadGuestState,
   loadRemoteState,
   loadUserStateLocal,
+  saveActiveArea,
   saveGuestState,
   saveRemoteState,
   saveUserStateLocal,
@@ -24,6 +26,7 @@ import {
   setModeInfo,
   scrollHistoryToDay,
   setAuthStage,
+  setActiveAreaButtons,
   showDataChoiceModal,
   hideDataChoiceModal,
   renderDiffList
@@ -48,6 +51,12 @@ let dataChoiceResolve = null;
 let mandatoryGoalReturnFocusEl = null;
 let deleteGoalReturnFocusEl = null;
 const THEME_KEY = "goal-theme";
+const AREAS = [
+  { id: "business", label: "Бизнес" },
+  { id: "health", label: "Здоровье" },
+  { id: "relationships", label: "Отношения" },
+];
+const DEFAULT_AREA = "business";
 const AUTH_TIMEOUT_MS = 8000;
 const AUTH_STATUS_HIDE_DELAY_MS = 500;
 const SYNC_TOAST_THROTTLE_MS = 1000;
@@ -66,6 +75,10 @@ let retryAttempt = 0;
 let loginActionInProgress = false;
 let loginAttemptId = 0;
 let oauthFallbackTimer = null;
+let activeArea = normalizeArea(loadActiveArea() || DEFAULT_AREA);
+let areaSwitchInProgress = false;
+let areaSwitchAttemptId = 0;
+let pendingAreaSwitch = null;
 const deviceId = getDeviceId();
 
 function withTimeout(promise, ms, label) {
@@ -82,6 +95,23 @@ function withTimeout(promise, ms, label) {
   });
 }
 
+function normalizeArea(area) {
+  const normalized = String(area || "").toLowerCase();
+  if (AREAS.some((entry) => entry.id === normalized)) return normalized;
+  return DEFAULT_AREA;
+}
+
+function areaLabel(area) {
+  const match = AREAS.find((entry) => entry.id === area);
+  return match?.label || area;
+}
+
+function setActiveArea(area) {
+  activeArea = normalizeArea(area);
+  saveActiveArea(activeArea);
+  setActiveAreaButtons(ui, activeArea);
+}
+
 boot().catch(err => hardFail(err));
 
 async function boot() {
@@ -90,6 +120,7 @@ async function boot() {
   setLoginLoading(false);
 
   wireEvents();
+  setActiveArea(activeArea);
 
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) return;
@@ -211,21 +242,25 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
     setAuthStage(ui, { text: "Проверяем сессию…", visible: true, showRetry: false });
     const sessionUser = await getSessionUser();
     user = sessionUser;
+    cloudReady = !!user;
     syncLoginButtonLabel();
     clearAuthTimeout();
 
     setAuthStage(ui, { text: "Загружаем данные…", visible: true, showRetry: false });
 
-    const guestRaw = loadGuestState(deviceId);
+    const guestRaw = loadGuestState(deviceId, activeArea);
     const guestState = guestRaw ? normalizeState(guestRaw) : null;
 
     let cloudState = null;
     let userLocalState = null;
+    const canAttemptRemote = !!user && (cloudReady || authInitTimedOut);
     if (user) {
-      setAuthStage(ui, { text: "Читаем облако…", visible: true, showRetry: false });
-      const remote = await loadRemoteState(supabase, user.id);
-      cloudState = remote?.state ? normalizeState(remote.state) : null;
-      const localRaw = loadUserStateLocal(user.id);
+      if (canAttemptRemote) {
+        setAuthStage(ui, { text: "Читаем облако…", visible: true, showRetry: false });
+        const remote = await loadRemoteState(supabase, user.id, activeArea);
+        cloudState = remote?.state ? normalizeState(remote.state) : null;
+      }
+      const localRaw = loadUserStateLocal(user.id, activeArea);
       userLocalState = localRaw ? normalizeState(localRaw) : null;
     }
 
@@ -234,7 +269,7 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
     const localHas = hasMeaningfulState(localState);
     const cloudHas = hasMeaningfulState(cloudState);
 
-    if (user && localHas && cloudHas && !statesEqual(localState, cloudState)) {
+    if (user && canAttemptRemote && localHas && cloudHas && !statesEqual(localState, cloudState)) {
       dataChoicePending = true;
       const diffSections = buildDiffSummary(localState, cloudState);
       renderDiffList(ui, diffSections);
@@ -261,9 +296,9 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
           lastConflictResolvedAt: Date.now(),
           lastConflictChoice: "cloud",
         };
-        const localGuestRes = saveGuestState(deviceId, updatedGuest, { skipGuard: true });
-        const localUserRes = saveUserStateLocal(user.id, state, { skipGuard: true });
-        localSaveOk = !!localGuestRes?.ok && !!localUserRes?.ok;
+        state = updatedGuest;
+        const localUserRes = saveUserStateLocal(user.id, activeArea, state, { skipGuard: true });
+        localSaveOk = !!localUserRes?.ok;
         isDirty = false;
         lastSaveOk = true;
         toast(ui, "Оставляем облачные данные");
@@ -277,10 +312,10 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
           lastConflictResolvedAt: Date.now(),
           lastConflictChoice: "local",
         };
-        const localGuestRes = saveGuestState(deviceId, updatedLocal, { skipGuard: true });
-        const localUserRes = saveUserStateLocal(user.id, state, { skipGuard: true });
-        localSaveOk = !!localGuestRes?.ok && !!localUserRes?.ok;
-        const res = await saveRemoteState(supabase, user.id, state, { skipGuard: true });
+        state = updatedLocal;
+        const localUserRes = saveUserStateLocal(user.id, activeArea, state, { skipGuard: true });
+        localSaveOk = !!localUserRes?.ok;
+        const res = await saveRemoteState(supabase, user.id, activeArea, state, { skipGuard: true });
         isDirty = !res.ok;
         lastSaveOk = res.ok;
         if (!res.ok) showOfflineNotice("Мы оффлайн, данные не сохранятся.");
@@ -297,11 +332,10 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
       isDirty = false;
       lastSaveOk = true;
       if (user) {
-        const localGuestRes = saveGuestState(deviceId, state);
-        const localUserRes = saveUserStateLocal(user.id, state);
-        localSaveOk = !!localGuestRes?.ok && !!localUserRes?.ok;
-        if (localHas && !cloudHas) {
-          const res = await saveRemoteState(supabase, user.id, state, { skipGuard: true });
+        const localUserRes = saveUserStateLocal(user.id, activeArea, state);
+        localSaveOk = !!localUserRes?.ok;
+        if (localHas && !cloudHas && canAttemptRemote) {
+          const res = await saveRemoteState(supabase, user.id, activeArea, state, { skipGuard: true });
           isDirty = !res.ok;
           lastSaveOk = res.ok;
           if (!res.ok) showOfflineNotice("Мы оффлайн, данные не сохранятся.");
@@ -309,7 +343,6 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
       }
     }
 
-    cloudReady = !!user;
     cloudBlockReason = cloudReady ? null : "no-user";
     if (!cloudReady) {
       logAuthStage(`Cloud disabled: ${cloudBlockReason}`);
@@ -336,6 +369,11 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
   } finally {
     clearAuthTimeout();
     authFlowInProgress = false;
+    if (pendingAreaSwitch) {
+      const nextArea = pendingAreaSwitch;
+      pendingAreaSwitch = null;
+      switchArea(nextArea);
+    }
     if (pendingSave && !dataChoicePending) {
       pendingSave = false;
       persist();
@@ -343,6 +381,152 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
     if (user && (isDirty || pendingSave) && !dataChoicePending) {
       pendingSave = false;
       persist();
+    }
+  }
+}
+
+async function switchArea(newArea) {
+  const targetArea = normalizeArea(newArea);
+  if (targetArea === activeArea) return;
+  if (authFlowInProgress) {
+    pendingAreaSwitch = targetArea;
+    toast(ui, `Переключение после входа: ${areaLabel(targetArea)}…`);
+    return;
+  }
+  if (dataChoicePending) return;
+  if (areaSwitchInProgress) {
+    pendingAreaSwitch = targetArea;
+    areaSwitchAttemptId += 1;
+    return;
+  }
+
+  const attemptId = ++areaSwitchAttemptId;
+  areaSwitchInProgress = true;
+
+  try {
+    if (isDirty) {
+      const snapshot = { ...state };
+      if (!user) {
+        saveGuestState(deviceId, activeArea, snapshot);
+      }
+      if (user) {
+        saveUserStateLocal(user.id, activeArea, snapshot);
+      }
+      if (user && (cloudReady || authInitTimedOut)) {
+        saveRemoteState(supabase, user.id, activeArea, snapshot).catch(() => null);
+      }
+    }
+
+    setActiveArea(targetArea);
+    toast(ui, `Переключаемся на: ${areaLabel(targetArea)}…`);
+
+    const guestRaw = loadGuestState(deviceId, targetArea);
+    const guestState = guestRaw ? normalizeState(guestRaw) : null;
+
+    let cloudState = null;
+    let userLocalState = null;
+    const canAttemptRemote = !!user && (cloudReady || authInitTimedOut);
+    if (user) {
+      const localRaw = loadUserStateLocal(user.id, targetArea);
+      userLocalState = localRaw ? normalizeState(localRaw) : null;
+      if (canAttemptRemote) {
+        const remote = await loadRemoteState(supabase, user.id, targetArea);
+        if (attemptId !== areaSwitchAttemptId) return;
+        cloudState = remote?.state ? normalizeState(remote.state) : null;
+      }
+    }
+
+    const localPick = pickLocalState(guestState, userLocalState);
+    const localState = localPick.state;
+    const localHas = hasMeaningfulState(localState);
+    const cloudHas = hasMeaningfulState(cloudState);
+
+    if (user && canAttemptRemote && localHas && cloudHas && !statesEqual(localState, cloudState)) {
+      dataChoicePending = true;
+      const diffSections = buildDiffSummary(localState, cloudState);
+      renderDiffList(ui, diffSections);
+      showDataChoiceModal(ui);
+
+      state = markOpened(normalizeState(localState));
+      renderAll(ui, state);
+      scrollToTop();
+
+      const choice = await waitForDataChoice();
+      if (attemptId !== areaSwitchAttemptId) return;
+      hideDataChoiceModal(ui);
+      dataChoicePending = false;
+
+      if (choice === "cloud") {
+        if (localState) {
+          backupState("local", localState);
+        }
+        state = markOpened(normalizeState(cloudState));
+        const updatedGuest = {
+          ...state,
+          lastConflictResolvedAt: Date.now(),
+          lastConflictChoice: "cloud",
+        };
+        state = updatedGuest;
+        const localUserRes = saveUserStateLocal(user.id, targetArea, state, { skipGuard: true });
+        localSaveOk = !!localUserRes?.ok;
+        isDirty = false;
+        lastSaveOk = true;
+        toast(ui, "Оставляем облачные данные");
+      } else if (choice === "local") {
+        if (cloudState) {
+          backupState("cloud", cloudState);
+        }
+        state = markOpened(normalizeState(localState));
+        const updatedLocal = {
+          ...state,
+          lastConflictResolvedAt: Date.now(),
+          lastConflictChoice: "local",
+        };
+        state = updatedLocal;
+        const localUserRes = saveUserStateLocal(user.id, targetArea, state, { skipGuard: true });
+        localSaveOk = !!localUserRes?.ok;
+        const res = await saveRemoteState(supabase, user.id, targetArea, state, { skipGuard: true });
+        isDirty = !res.ok;
+        lastSaveOk = res.ok;
+        if (!res.ok) showOfflineNotice("Мы оффлайн, данные не сохранятся.");
+        toast(ui, "Оставляем локальные данные");
+      }
+    } else {
+      const finalState = cloudHas
+        ? cloudState
+        : localHas
+          ? localState
+          : defaultState();
+      state = markOpened(normalizeState(finalState));
+      isDirty = false;
+      lastSaveOk = true;
+      if (user) {
+        const localUserRes = saveUserStateLocal(user.id, targetArea, state);
+        localSaveOk = !!localUserRes?.ok;
+        if (localHas && !cloudHas && (cloudReady || authInitTimedOut)) {
+          const res = await saveRemoteState(supabase, user.id, targetArea, state, { skipGuard: true });
+          isDirty = !res.ok;
+          lastSaveOk = res.ok;
+          if (!res.ok) showOfflineNotice("Мы оффлайн, данные не сохранятся.");
+        }
+      } else {
+        const localGuestRes = saveGuestState(deviceId, targetArea, state);
+        localSaveOk = !!localGuestRes?.ok;
+      }
+    }
+
+    if (attemptId !== areaSwitchAttemptId) return;
+    mode = user ? "remote" : "guest";
+    setModeInfo(ui, { mode, user, cloudReady, localSaveOk });
+    updateNetBadge();
+    renderAll(ui, state);
+    scrollToTop();
+  } finally {
+    areaSwitchInProgress = false;
+    const nextArea = pendingAreaSwitch;
+    pendingAreaSwitch = null;
+    if (nextArea && nextArea !== activeArea) {
+      switchArea(nextArea);
     }
   }
 }
@@ -422,6 +606,16 @@ function wireEvents() {
       if (ui.authStatusBtn.dataset.retry !== "true") return;
       setAuthStage(ui, { text: "Проверяем сессию…", visible: true, showRetry: false });
       location.reload();
+    });
+  }
+
+  if (ui.areaButtons?.length) {
+    ui.areaButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const area = btn.dataset.area;
+        if (!area) return;
+        switchArea(area);
+      });
     });
   }
 
@@ -1055,9 +1249,9 @@ async function persist() {
   if (dataChoicePending) return;
   saving = true;
   saveInProgress = true;
-  const localRes = saveGuestState(deviceId, state);
-  localSaveOk = !!localRes?.ok;
   if (!user) {
+    const localRes = saveGuestState(deviceId, activeArea, state);
+    localSaveOk = !!localRes?.ok;
     setModeInfo(ui, { mode: "guest", user, cloudReady, localSaveOk });
     isDirty = !localRes?.ok;
     lastSaveOk = localRes?.ok || false;
@@ -1067,8 +1261,8 @@ async function persist() {
     return { ok: !!localRes?.ok, mode: "guest" };
   }
 
-  const localUserRes = saveUserStateLocal(user.id, state);
-  localSaveOk = localSaveOk && !!localUserRes?.ok;
+  const localUserRes = saveUserStateLocal(user.id, activeArea, state);
+  localSaveOk = !!localUserRes?.ok;
   const canAttemptRemote = cloudReady || authInitTimedOut;
   if (!canAttemptRemote) {
     mode = "local";
@@ -1088,7 +1282,7 @@ async function persist() {
     logAuthStage("Cloud not ready after auth timeout: пытаемся сохранить в облако.");
   }
 
-  const res = await saveRemoteState(supabase, user.id, state);
+  const res = await saveRemoteState(supabase, user.id, activeArea, state);
   mode = "remote";
   setModeInfo(ui, { mode, user, cloudReady, localSaveOk });
   if (res.ok) {

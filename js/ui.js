@@ -9,6 +9,7 @@ export function bindUI() {
     netBadge: el("netBadge"),
     btnLogin: el("btnLogin"),
     btnTheme: el("btnTheme"),
+    areaButtons: Array.from(document.querySelectorAll(".areaSwitch")),
 
     mandatoryGoalActionBtn: el("mandatoryGoalActionBtn"),
     mandatoryGoalActionText: el("mandatoryGoalActionText"),
@@ -166,6 +167,15 @@ export function setAuthStage(ui, { text, showRetry = false, visible = true } = {
   ui.authStatusBtn.hidden = !visible;
   ui.authStatusBtn.disabled = !showRetry;
   ui.authStatusBtn.dataset.retry = showRetry ? "true" : "false";
+}
+
+export function setActiveAreaButtons(ui, activeArea) {
+  if (!ui.areaButtons?.length) return;
+  ui.areaButtons.forEach((btn) => {
+    const isActive = btn.dataset.area === activeArea;
+    btn.classList.toggle("is-active", isActive);
+    btn.setAttribute("aria-pressed", isActive ? "true" : "false");
+  });
 }
 
 export function renderDiffList(ui, sections = []) {

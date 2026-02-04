@@ -23,11 +23,18 @@
         </div>
       </div>
 
-      <div class="actions">
-        <button id="authStatusBtn" class="pill btn ghost" hidden>Проверяем сессию…</button>
-        <span id="netBadge" class="pill">Офлайн</span>
-        <button id="btnLogin" class="pill btn">🔐 Войти</button>
-        <button id="btnTheme" class="pill btn">🌓 Тема</button>
+      <div class="actions actionsStack">
+        <div class="actionsRow">
+          <button id="authStatusBtn" class="pill btn ghost" hidden>Проверяем сессию…</button>
+          <span id="netBadge" class="pill">Офлайн</span>
+          <button id="btnLogin" class="pill btn">🔐 Войти</button>
+          <button id="btnTheme" class="pill btn">🌓 Тема</button>
+        </div>
+        <div class="actionsRow actionsRowAreas" aria-label="Сфера жизни">
+          <button class="pill btn areaSwitch" type="button" data-area="business">Бизнес</button>
+          <button class="pill btn areaSwitch" type="button" data-area="health">Здоровье</button>
+          <button class="pill btn areaSwitch" type="button" data-area="relationships">Отношения</button>
+        </div>
       </div>
     </header>
 

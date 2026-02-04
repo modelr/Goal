@@ -2,6 +2,7 @@ import { SUPABASE } from "./config.js";
 import { nowMs } from "./state.js";
 
 const DEVICE_KEY = "mr_device_id";
+const ACTIVE_AREA_KEY = "goal_active_area";
 const GUEST_KEY_PREFIX = "goal_guest_";
 const USER_KEY_PREFIX = "goal_user_";
 const BACKUP_INDEX_PREFIX = "goal_backup_index_";
@@ -35,32 +36,68 @@ export function getDeviceId() {
   }
 }
 
-export function guestStorageKey(deviceId) {
-  return `${GUEST_KEY_PREFIX}${deviceId}`;
+export function guestStorageKey(deviceId, area) {
+  return `${GUEST_KEY_PREFIX}${deviceId}_${area}`;
 }
 
-export function userStorageKey(userId) {
-  return `${USER_KEY_PREFIX}${userId}`;
+export function userStorageKey(userId, area) {
+  return `${USER_KEY_PREFIX}${userId}_${area}`;
 }
 
-export function loadGuestState(deviceId) {
-  return loadLocalState(guestStorageKey(deviceId));
+export function loadActiveArea() {
+  try {
+    return localStorage.getItem(ACTIVE_AREA_KEY);
+  } catch {
+    return null;
+  }
 }
 
-export function loadUserStateLocal(userId) {
-  return loadLocalState(userStorageKey(userId));
+export function saveActiveArea(area) {
+  try {
+    localStorage.setItem(ACTIVE_AREA_KEY, area);
+  } catch {}
 }
 
-export function saveGuestState(deviceId, state, options = {}) {
-  return saveLocalState(guestStorageKey(deviceId), state, options);
+export function loadGuestState(deviceId, area) {
+  const key = guestStorageKey(deviceId, area);
+  const existing = loadLocalState(key);
+  if (isMeaningfulState(existing)) return existing;
+  if (area === "business") {
+    const legacyKey = `${GUEST_KEY_PREFIX}${deviceId}`;
+    const legacyState = loadLocalState(legacyKey);
+    if (isMeaningfulState(legacyState) && !isMeaningfulState(existing)) {
+      return migrateLegacyState({ legacyKey, newKey: key });
+    }
+    return existing || legacyState;
+  }
+  return existing;
 }
 
-export function saveUserStateLocal(userId, state, options = {}) {
-  return saveLocalState(userStorageKey(userId), state, options);
+export function loadUserStateLocal(userId, area) {
+  const key = userStorageKey(userId, area);
+  const existing = loadLocalState(key);
+  if (isMeaningfulState(existing)) return existing;
+  if (area === "business") {
+    const legacyKey = `${USER_KEY_PREFIX}${userId}`;
+    const legacyState = loadLocalState(legacyKey);
+    if (isMeaningfulState(legacyState) && !isMeaningfulState(existing)) {
+      return migrateLegacyState({ legacyKey, newKey: key });
+    }
+    return existing || legacyState;
+  }
+  return existing;
 }
 
-export async function loadRemoteState(supabase, userId) {
-  if (!supabase || !userId) return null;
+export function saveGuestState(deviceId, area, state, options = {}) {
+  return saveLocalState(guestStorageKey(deviceId, area), state, options);
+}
+
+export function saveUserStateLocal(userId, area, state, options = {}) {
+  return saveLocalState(userStorageKey(userId, area), state, options);
+}
+
+export async function loadRemoteState(supabase, userId, area) {
+  if (!supabase || !userId || !area) return null;
 
   const controller = new AbortController();
 
@@ -69,6 +106,7 @@ export async function loadRemoteState(supabase, userId) {
       .from(SUPABASE.TABLE)
       .select("state, updated_at")
       .eq("user_id", userId)
+      .eq("area", area)
       .maybeSingle();
 
     // abortSignal есть не во всех сборках/версиях
@@ -99,10 +137,10 @@ export async function loadRemoteState(supabase, userId) {
   }
 }
 
-export async function saveRemoteState(supabase, userId, state, options = {}) {
-  if (!supabase || !userId) return { ok: false, reason: "no-user" };
+export async function saveRemoteState(supabase, userId, area, state, options = {}) {
+  if (!supabase || !userId || !area) return { ok: false, reason: "no-user" };
 
-  const cached = loadUserStateLocal(userId);
+  const cached = loadUserStateLocal(userId, area);
   if (!options.skipGuard && shouldBlockEmptySave(state, cached)) {
     console.warn("[storage] Skip remote save: empty state would overwrite non-empty cache.");
     return { ok: false, reason: "empty-guard" };
@@ -113,13 +151,14 @@ export async function saveRemoteState(supabase, userId, state, options = {}) {
   try {
     const payload = {
       user_id: userId,
+      area,
       state,
       updated_at: new Date(nowMs()).toISOString(),
     };
 
     let q = supabase
       .from(SUPABASE.TABLE)
-      .upsert(payload, { onConflict: "user_id" });
+      .upsert(payload, { onConflict: "user_id,area" });
 
     if (typeof q.abortSignal === "function") {
       q = q.abortSignal(controller.signal);
@@ -191,6 +230,17 @@ function loadLocalState(key) {
   } catch {
     return null;
   }
+}
+
+function migrateLegacyState({ legacyKey, newKey }) {
+  if (!legacyKey || !newKey) return null;
+  const legacyState = loadLocalState(legacyKey);
+  if (!legacyState) return null;
+  const res = saveLocalState(newKey, legacyState, { skipGuard: true });
+  if (res?.ok) {
+    try { localStorage.removeItem(legacyKey); } catch {}
+  }
+  return legacyState;
 }
 
 function saveLocalState(key, state, options = {}) {

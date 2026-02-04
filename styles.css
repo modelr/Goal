@@ -238,6 +238,20 @@ h1{
   justify-content:flex-end;
   align-items:center;
 }
+.actions.actionsStack{
+  flex-direction: column;
+  align-items: flex-end;
+}
+.actionsRow{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  justify-content:flex-end;
+  align-items:center;
+}
+.actionsRowAreas{
+  margin-top: 4px;
+}
 
 .goalActionWrap{
   display: inline-flex;
@@ -449,6 +463,15 @@ textarea{
   background: rgba(255,255,255,.03);
   white-space:nowrap;
   --pill-height: calc(12px * 1.2 + 8px);
+}
+.pill.btn.is-active{
+  background: rgba(124,58,237,.18);
+  border-color: rgba(124,58,237,.55);
+  color: var(--text);
+}
+[data-theme="light"] .pill.btn.is-active{
+  background: rgba(249,115,22,.18);
+  border-color: rgba(249,115,22,.55);
 }
 .mutedPill{ color: var(--muted); }
 
