@@ -72,6 +72,29 @@ export function toast(ui, msg, ms = 2000) {
   setTimeout(() => (ui.toast.hidden = true), ms);
 }
 
+const CLOUD_LOCAL_REGEX =
+  /(^|[^A-Za-zА-Яа-яЁё0-9_])(на\s+облаке|в\s+облаке|облако|на\s+локально|в\s+локально|локально)([^A-Za-zА-Яа-яЁё0-9_]|$)/gi;
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+export function formatCloudLocalHighlight(text) {
+  if (text == null) return "";
+  const raw = String(text);
+  const escaped = escapeHtml(raw);
+  return escaped.replace(CLOUD_LOCAL_REGEX, (match, prefix, status, suffix) => {
+    const isLocal = /локал/i.test(status);
+    const className = isLocal ? "histPrefix histLocal" : "histPrefix histCloud";
+    return `${prefix}<span class="${className}">${status}</span>${suffix}`;
+  });
+}
+
 const CLOUD_ICON = `
   <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
     <path d="M7.5 18a4.5 4.5 0 0 1-.3-9 5.6 5.6 0 0 1 10.6 1.8 3.6 3.6 0 0 1 .2 7.2H7.5Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
@@ -236,7 +259,7 @@ export function renderDiffList(ui, sections = []) {
         if (item?.type === "goal-change") {
           renderGoalDiff(li, item);
         } else {
-          li.textContent = item;
+          li.innerHTML = formatCloudLocalHighlight(item);
         }
         list.appendChild(li);
       });
@@ -540,7 +563,7 @@ export function renderHistory(ui, state) {
     const line = document.createElement("div");
     line.className = "histLine";
     const prefixSpan = document.createElement("span");
-    prefixSpan.className = "histPrefix";
+	prefixSpan.className = "histHistoryPrefix";
     prefixSpan.textContent = prefix;
     line.appendChild(prefixSpan);
     if (text) {
@@ -647,5 +670,6 @@ export function scrollHistoryToDay(ui, key) {
     behavior: "smooth",
   });
 }
+
 
 
