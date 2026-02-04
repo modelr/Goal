@@ -746,7 +746,9 @@ textarea{
 .histBody{ white-space:pre-wrap; color: var(--muted); }
 .histLine{ display:block; margin-bottom: 4px; }
 .histLine:last-child{ margin-bottom: 0; }
-.histPrefix{
+#dataChoiceModal .histPrefix,
+#history .histPrefix,
+.history .histPrefix{
   display:inline-flex;
   align-items:center;
   gap: 6px;
@@ -756,7 +758,9 @@ textarea{
   color: var(--accent);
   background: rgba(124,58,237,.16);
 }
-[data-theme="light"] .histPrefix{
+[data-theme="light"] #dataChoiceModal .histPrefix,
+[data-theme="light"] #history .histPrefix,
+[data-theme="light"] .history .histPrefix{
   background: rgba(249, 115, 22, 0.18);
 }
 .histText{
@@ -1012,5 +1016,6 @@ button.pill.btn { cursor: pointer; }
 .taskOption input{
   margin: 0;
 }
+
 
 
