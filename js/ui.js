@@ -420,6 +420,18 @@ function escapeHtml(value) {
 
 export function renderGoals(ui, state) {
   ui.goalsList.innerHTML = "";
+  const hasNoGoals = state.dailyGoals.length === 0;
+
+  if (hasNoGoals) {
+    ui.goalsList.classList.add("is-empty");
+    const empty = document.createElement("div");
+    empty.className = "goalsEmpty";
+    empty.textContent = "Пока задач нет";
+    ui.goalsList.appendChild(empty);
+    return;
+  }
+
+  ui.goalsList.classList.remove("is-empty");
 
   state.dailyGoals.forEach((g, idx) => {
     const wrap = document.createElement("div");
@@ -635,4 +647,5 @@ export function scrollHistoryToDay(ui, key) {
     behavior: "smooth",
   });
 }
+
 
