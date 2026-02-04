@@ -144,13 +144,43 @@ async function boot() {
   if (supabase && !authListenerAttached) {
     authListenerAttached = true;
     supabase.auth.onAuthStateChange(async (event, session) => {
-      user = session?.user || null;
       setLoginLoading(false);
+      if (event === "SIGNED_OUT") {
+        // На выходе НЕ надо дергать getSession/runAuthInit — просто сбрасываем облако
+        user = null;
+        cloudReady = false;
+        mode = "guest";
+        cloudBlockReason = null;
+        authInitTimedOut = false;
+        authFlowInProgress = false;
+        saving = false;
+        saveInProgress = false;
+        pendingSave = false;
+        dataChoicePending = false;
+        isDirty = !localSaveOk;
+        if (saveTimer) {
+          clearTimeout(saveTimer);
+          saveTimer = null;
+        }
+        clearAuthTimeout();
+        clearRetry();
+
+        setModeInfo(ui, { mode, user, cloudReady, localSaveOk });
+        updateNetBadge();
+        setAuthStage(ui, { text: "Локально", visible: true });
+        syncLoginButtonLabel();
+        toast(ui, "Вышли, гостевой режим");
+        return;
+      }
+
+      user = session?.user || null;
       syncLoginButtonLabel();
-      const shouldInit = ["SIGNED_IN", "SIGNED_OUT", "INITIAL_SESSION"].includes(event);
+      const shouldInit = ["SIGNED_IN", "INITIAL_SESSION"].includes(event);
       if (shouldInit) {
         await runAuthInit({ reason: `auth-change:${event}` });
-        toast(ui, user ? "Вошли, данные синхронизированы" : "Вышли, гостевой режим");
+        if (event === "SIGNED_IN") {
+          toast(ui, "Вошли, данные синхронизированы");
+        }
         return;
       }
       if (event === "TOKEN_REFRESHED") {
@@ -1683,6 +1713,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
