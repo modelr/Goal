@@ -66,7 +66,7 @@ export function bindUI() {
   };
 }
 
-export function toast(ui, msg, ms = 2000) {
+export  toast(ui, msg, ms = 2000) {
   ui.toast.textContent = msg;
   ui.toast.hidden = false;
   setTimeout(() => (ui.toast.hidden = true), ms);
@@ -75,7 +75,7 @@ export function toast(ui, msg, ms = 2000) {
 const CLOUD_LOCAL_REGEX =
   /(^|[^A-Za-zА-Яа-яЁё0-9_])(на\s+облаке|в\s+облаке|облако|на\s+локально|в\s+локально|локально)([^A-Za-zА-Яа-яЁё0-9_]|$)/gi;
 
-
+function escapeHtml(value) {
   return String(value)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -84,7 +84,7 @@ const CLOUD_LOCAL_REGEX =
     .replace(/'/g, "&#39;");
 }
 
-export function formatCloudLocalHighlight(text) {
+export  formatCloudLocalHighlight(text) {
   if (text == null) return "";
   const raw = String(text);
   const escaped = escapeHtml(raw);
@@ -107,7 +107,7 @@ const CLOUD_CHECK_ICON = `
   </svg>
 `;
 
-export function setOnlineBadge(
+export  setOnlineBadge(
   ui,
   {
     isDirty,
@@ -166,7 +166,7 @@ export function setOnlineBadge(
 }
 
 
-export function setModeInfo(ui, { mode, user, cloudReady, localSaveOk }) {
+export  setModeInfo(ui, { mode, user, cloudReady, localSaveOk }) {
   if (user) {
     if (cloudReady) {
       ui.modeInfo.textContent = `Облачный режим (Supabase). Пользователь: ${user.email || user.id}`;
@@ -661,6 +661,7 @@ export function scrollHistoryToDay(ui, key) {
     behavior: "smooth",
   });
 }
+
 
 
 
