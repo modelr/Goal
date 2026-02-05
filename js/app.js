@@ -30,7 +30,7 @@ import {
   hideDataChoiceModal,
   renderDiffList
 } from "./ui.js";
-import { APP } from "./config.js";
+import { APP, AREAS } from "./config.js";
 
 const ui = bindUI();
 const supabase = safeCreateSupabase();
@@ -1316,3 +1316,4 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
