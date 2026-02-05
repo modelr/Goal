@@ -48,6 +48,7 @@ let offlineModalShown = false;
 let commentModalGoalId = null;
 let deleteGoalId = null;
 let dataChoiceResolve = null;
+let dataChoicePromise = null;
 let mandatoryGoalReturnFocusEl = null;
 let deleteGoalReturnFocusEl = null;
 const THEME_KEY = "goal-theme";
@@ -65,6 +66,7 @@ const RETRY_MAX_DELAY_MS = 10000;
 let authListenerAttached = false;
 let authFlowInProgress = false;
 let dataChoicePending = false;
+let conflictResolving = false;
 let pendingSave = false;
 let authStageTimer = null;
 let authInitTimedOut = false;
@@ -299,7 +301,7 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
     const localHas = hasMeaningfulState(localState);
     const cloudHas = hasMeaningfulState(cloudState);
 
-    if (user && canAttemptRemote && localHas && cloudHas && !statesEqual(localState, cloudState)) {
+    if (user && canAttemptRemote && localHas && cloudHas && !statesEqual(localState, cloudState) && !conflictResolving) {
       dataChoicePending = true;
       const diffSections = buildDiffSummary(localState, cloudState);
       renderDiffList(ui, diffSections);
@@ -312,44 +314,15 @@ async function runAuthInit({ force = false, reason = "" } = {}) {
       renderAll(ui, state);
       scrollToTop();
 
-      const choice = await waitForDataChoice();
-      hideDataChoiceModal(ui);
-      dataChoicePending = false;
-
-      if (choice === "cloud") {
-        if (localState) {
-          backupState("local", localState);
+      let resolved = false;
+      while (!resolved) {
+        const choice = await waitForDataChoice();
+        const result = await resolveConflict({ choice, localState, cloudState, area: activeArea });
+        resolved = result?.ok === true;
+        if (resolved) {
+          hideDataChoiceModal(ui);
+          dataChoicePending = false;
         }
-        state = markOpened(normalizeState(cloudState));
-        const updatedGuest = {
-          ...state,
-          lastConflictResolvedAt: Date.now(),
-          lastConflictChoice: "cloud",
-        };
-        state = updatedGuest;
-        const localUserRes = saveUserStateLocal(user.id, activeArea, state, { skipGuard: true });
-        localSaveOk = !!localUserRes?.ok;
-        isDirty = false;
-        lastSaveOk = true;
-        toast(ui, "Оставляем облачные данные");
-      } else if (choice === "local") {
-        if (cloudState) {
-          backupState("cloud", cloudState);
-        }
-        state = markOpened(normalizeState(localState));
-        const updatedLocal = {
-          ...state,
-          lastConflictResolvedAt: Date.now(),
-          lastConflictChoice: "local",
-        };
-        state = updatedLocal;
-        const localUserRes = saveUserStateLocal(user.id, activeArea, state, { skipGuard: true });
-        localSaveOk = !!localUserRes?.ok;
-        const res = await saveRemoteState(supabase, user.id, activeArea, state, { skipGuard: true });
-        isDirty = !res.ok;
-        lastSaveOk = res.ok;
-        if (!res.ok) showOfflineNotice("Мы оффлайн, данные не сохранятся.");
-        toast(ui, "Оставляем локальные данные");
       }
     } else {
       const finalState = cloudHas
@@ -471,7 +444,7 @@ async function switchArea(newArea) {
     const localHas = hasMeaningfulState(localState);
     const cloudHas = hasMeaningfulState(cloudState);
 
-    if (user && canAttemptRemote && localHas && cloudHas && !statesEqual(localState, cloudState)) {
+    if (user && canAttemptRemote && localHas && cloudHas && !statesEqual(localState, cloudState) && !conflictResolving) {
       dataChoicePending = true;
       const diffSections = buildDiffSummary(localState, cloudState);
       renderDiffList(ui, diffSections);
@@ -481,46 +454,19 @@ async function switchArea(newArea) {
       renderAll(ui, state);
       scrollToTop();
 
-      const choice = await waitForDataChoice();
-      if (attemptId !== areaSwitchAttemptId) return;
-      hideDataChoiceModal(ui);
-      dataChoicePending = false;
-
-      if (choice === "cloud") {
-        if (localState) {
-          backupState("local", localState);
+      let resolved = false;
+      while (!resolved) {
+        if (attemptId !== areaSwitchAttemptId) return;
+        const choice = await waitForDataChoice();
+        if (attemptId !== areaSwitchAttemptId) return;
+        const result = await resolveConflict({ choice, localState, cloudState, area: targetArea });
+        resolved = result?.ok === true;
+        if (resolved && attemptId === areaSwitchAttemptId) {
+          hideDataChoiceModal(ui);
+          dataChoicePending = false;
         }
-        state = markOpened(normalizeState(cloudState));
-        const updatedGuest = {
-          ...state,
-          lastConflictResolvedAt: Date.now(),
-          lastConflictChoice: "cloud",
-        };
-        state = updatedGuest;
-        const localUserRes = saveUserStateLocal(user.id, targetArea, state, { skipGuard: true });
-        localSaveOk = !!localUserRes?.ok;
-        isDirty = false;
-        lastSaveOk = true;
-        toast(ui, "Оставляем облачные данные");
-      } else if (choice === "local") {
-        if (cloudState) {
-          backupState("cloud", cloudState);
-        }
-        state = markOpened(normalizeState(localState));
-        const updatedLocal = {
-          ...state,
-          lastConflictResolvedAt: Date.now(),
-          lastConflictChoice: "local",
-        };
-        state = updatedLocal;
-        const localUserRes = saveUserStateLocal(user.id, targetArea, state, { skipGuard: true });
-        localSaveOk = !!localUserRes?.ok;
-        const res = await saveRemoteState(supabase, user.id, targetArea, state, { skipGuard: true });
-        isDirty = !res.ok;
-        lastSaveOk = res.ok;
-        if (!res.ok) showOfflineNotice("Мы оффлайн, данные не сохранятся.");
-        toast(ui, "Оставляем локальные данные");
       }
+      if (attemptId !== areaSwitchAttemptId) return;
     } else {
       const finalState = cloudHas
         ? cloudState
@@ -562,9 +508,131 @@ async function switchArea(newArea) {
 }
 
 function waitForDataChoice() {
-  return new Promise((resolve) => {
-    dataChoiceResolve = resolve;
+  if (dataChoicePromise) return dataChoicePromise;
+  dataChoicePromise = new Promise((resolve) => {
+    if (dataChoiceResolve) {
+      console.warn("[conflict] overriding dataChoiceResolve");
+    }
+    dataChoiceResolve = (choice) => {
+      dataChoiceResolve = null;
+      dataChoicePromise = null;
+      resolve(choice);
+    };
   });
+  return dataChoicePromise;
+}
+
+function setConflictResolving(nextValue) {
+  conflictResolving = nextValue;
+}
+
+function setDataChoiceButtonsState({ disabled, label } = {}) {
+  const buttons = [ui.dataChoiceCloudBtn, ui.dataChoiceLocalBtn].filter(Boolean);
+  buttons.forEach((btn) => {
+    if (!btn.dataset.originalText) {
+      btn.dataset.originalText = btn.textContent || "";
+    }
+    if (disabled && label) {
+      btn.textContent = label;
+    } else if (!disabled) {
+      btn.textContent = btn.dataset.originalText;
+    }
+    btn.disabled = !!disabled;
+  });
+}
+
+function resolveLocalSaveOk(...results) {
+  return results.filter(Boolean).every((res) => res?.ok === true);
+}
+
+async function resolveConflict({ choice, localState, cloudState, area }) {
+  if (conflictResolving) return null;
+  if (!choice) return null;
+  const resolvedArea = area || activeArea;
+  setConflictResolving(true);
+  setDataChoiceButtonsState({ disabled: true, label: "Применяем…" });
+
+  try {
+    let effectiveChoice = choice;
+    if (choice === "cloud" && !cloudState) {
+      console.warn("[conflict] cloud choice but cloudState empty");
+      if (localState) {
+        toast(ui, "Ошибка: облачные данные недоступны. Оставляем локальные.");
+        effectiveChoice = "local";
+      } else {
+        toast(ui, "Ошибка: выбранные данные недоступны.");
+        return { ok: false, reason: "cloud-missing" };
+      }
+    }
+    if (choice === "local" && !localState) {
+      console.warn("[conflict] local choice but localState empty");
+      if (cloudState) {
+        toast(ui, "Ошибка: локальные данные недоступны. Оставляем облачные.");
+        effectiveChoice = "cloud";
+      } else {
+        toast(ui, "Ошибка: выбранные данные недоступны.");
+        return { ok: false, reason: "local-missing" };
+      }
+    }
+
+    if (effectiveChoice === "cloud") {
+      console.info("[conflict] resolve cloud start");
+      if (localState) {
+        backupState("local", localState);
+      }
+      const nextState = {
+        ...markOpened(normalizeState(cloudState)),
+        lastConflictResolvedAt: Date.now(),
+        lastConflictChoice: "cloud",
+      };
+      const guestRes = saveGuestState(deviceId, resolvedArea, nextState, { skipGuard: true });
+      const userRes = user
+        ? saveUserStateLocal(user.id, resolvedArea, nextState, { skipGuard: true })
+        : null;
+      localSaveOk = resolveLocalSaveOk(guestRes, userRes);
+      console.info("[conflict] saved local from cloud ok");
+      state = nextState;
+      isDirty = false;
+      lastSaveOk = true;
+      toast(ui, "Оставляем облачные данные");
+      console.info("[conflict] resolve cloud done");
+      return { ok: true, state };
+    }
+
+    if (effectiveChoice === "local") {
+      console.info("[conflict] resolve local start");
+      if (cloudState) {
+        backupState("cloud", cloudState);
+      }
+      const nextState = {
+        ...markOpened(normalizeState(localState)),
+        lastConflictResolvedAt: Date.now(),
+        lastConflictChoice: "local",
+      };
+      const guestRes = saveGuestState(deviceId, resolvedArea, nextState, { skipGuard: true });
+      const userRes = user
+        ? saveUserStateLocal(user.id, resolvedArea, nextState, { skipGuard: true })
+        : null;
+      localSaveOk = resolveLocalSaveOk(guestRes, userRes);
+      if (user) {
+        const res = await saveRemoteState(supabase, user.id, resolvedArea, nextState, { skipGuard: true });
+        isDirty = !res.ok;
+        lastSaveOk = res.ok;
+        if (!res.ok) showOfflineNotice("Мы оффлайн, данные не сохранятся.");
+      } else {
+        isDirty = false;
+        lastSaveOk = true;
+      }
+      state = nextState;
+      toast(ui, "Оставляем локальные данные");
+      console.info("[conflict] resolve local done");
+      return { ok: true, state };
+    }
+  } finally {
+    setConflictResolving(false);
+    setDataChoiceButtonsState({ disabled: false });
+  }
+  return { ok: false, reason: "no-choice" };
 }
 
 function startAuthTimeout() {
@@ -945,19 +1013,19 @@ ui.btnLogin.addEventListener("click", async () => {
     });
   }
 
-  if (ui.dataChoiceCloudBtn) {
+    if (ui.dataChoiceCloudBtn) {
     ui.dataChoiceCloudBtn.addEventListener("click", () => {
+      if (conflictResolving) return;
       if (dataChoiceResolve) {
         dataChoiceResolve("cloud");
-        dataChoiceResolve = null;
       }
     });
   }
   if (ui.dataChoiceLocalBtn) {
     ui.dataChoiceLocalBtn.addEventListener("click", () => {
+      if (conflictResolving) return;
       if (dataChoiceResolve) {
         dataChoiceResolve("local");
-        dataChoiceResolve = null;
       }
     });
   }
@@ -1713,6 +1781,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
