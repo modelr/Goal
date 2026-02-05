@@ -106,21 +106,11 @@ export function setOnlineBadge(
     return;
   }
 
-  if (hasUser && !cloudReady) {
-    if (isDirty) {
-      badge.dataset.status = "pending";
-      badge.innerHTML = `<span class="netBadgeIcon">${CLOUD_ICON}</span><span class="netBadgeText">Сохраняем…</span>`;
-      badge.setAttribute("aria-label", "Сохраняем");
-      badge.title = "Сохраняем локально";
-      return;
-    }
-    if (localSaveOk === false) {
-      badge.dataset.status = "pending";
-      badge.innerHTML = `<span class="netBadgeIcon">${CLOUD_ICON}</span><span class="netBadgeText">Не сохранено</span>`;
-      badge.setAttribute("aria-label", "Не сохранено");
-      badge.title = "Локальное сохранение не удалось";
-      return;
-    }
+  const isCloudUnavailable = !cloudReady;
+  const localSaved = localSaveOk === true;
+  const hasUnsaved = isDirty || localSaveOk === false || (!isCloudUnavailable && lastSaveOk === false);
+
+  if (hasUser && isCloudUnavailable && localSaved && !hasUnsaved) {
     badge.dataset.status = "local";
     badge.innerHTML = `<span class="netBadgeIcon">${CLOUD_CHECK_ICON}</span><span class="netBadgeText">Сохранено локально</span>`;
     badge.setAttribute("aria-label", "Сохранено локально");
@@ -128,7 +118,7 @@ export function setOnlineBadge(
     return;
   }
 
-  if (isDirty || lastSaveOk !== true) {
+  if (hasUnsaved) {
     badge.dataset.status = "pending";
     badge.innerHTML = `<span class="netBadgeIcon">${CLOUD_ICON}</span><span class="netBadgeText">Не сохранено</span>`;
     badge.setAttribute("aria-label", "Не сохранено");
@@ -661,6 +651,7 @@ export function scrollHistoryToDay(ui, key) {
     behavior: "smooth",
   });
 }
+
 
 
 
