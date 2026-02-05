@@ -1382,10 +1382,14 @@ async function persist() {
 
   const res = await saveRemoteState(supabase, user.id, activeArea, state);
   mode = "remote";
-  setModeInfo(ui, { mode, user, cloudReady, localSaveOk });
   if (res.ok) {
-    isDirty = false;
-    lastSaveOk = true;
+    const retryLocalRes = saveUserStateLocal(user.id, activeArea, state, { skipGuard: true });
+    localSaveOk = !!retryLocalRes?.ok;
+    if (!localSaveOk) {
+      console.warn("[storage] Local save failed after remote sync.");
+    }
+    lastSaveOk = res.ok && localSaveOk;
+    isDirty = !lastSaveOk;
     cloudBlockReason = null;
     clearRetry();
   } else {
@@ -1395,10 +1399,11 @@ async function persist() {
     showSyncToastOnce("Не удалось синхронизировать. Проверьте вход и нажмите ‘Повторить’.");
     scheduleRetry(res.reason || "remote-save-failed");
   }
+  setModeInfo(ui, { mode, user, cloudReady, localSaveOk });
   saving = false;
   saveInProgress = false;
   updateNetBadge();
-  return { ...res, mode: "remote" };
+  return { ...res, ok: lastSaveOk, mode: "remote" };
 }
 
 
@@ -1781,6 +1786,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
