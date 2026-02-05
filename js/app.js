@@ -32,22 +32,25 @@ import {
 } from "./ui.js";
 import { APP } from "./config.js";
 
-];
-const DEFAULT_AREA = "business";
-const AUTH_STATUS_HIDE_DELAY_MS = 500;
-let authListenerAttached = false;
-let dataChoicePending = false;
-let conflictResolving = false;
-let syncInProgress = false;
-let loginActionInProgress = false;
-let activeArea = normalizeArea(loadActiveArea() || DEFAULT_AREA);
-const deviceId = getDeviceId();
-let saveTimer = null;
-const AREAS = [
-  { id: "business", label: "Бизнес" },
-  { id: "health", label: "Здоровье" },
-  { id: "relationships", label: "Отношения" },
-];
+const ui = bindUI();
+const supabase = safeCreateSupabase();
+let state = null;
+let user = null;
+let mode = "guest";
+let cloudReady = false;
+let isDirty = false;
+let lastSaveOk = null;
+let localSaveOk = null;
+let saveInProgress = false;
+let commentModalGoalId = null;
+let deleteGoalId = null;
+let dataChoiceResolve = null;
+let dataChoicePromise = null;
+let mandatoryGoalReturnFocusEl = null;
+let deleteGoalReturnFocusEl = null;
+const THEME_KEY = "goal-theme";
+
+
 const DEFAULT_AREA = "business";
 const AUTH_STATUS_HIDE_DELAY_MS = 500;
 let authListenerAttached = false;
@@ -1313,34 +1316,3 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
