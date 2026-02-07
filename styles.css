@@ -351,6 +351,7 @@ input[type="text"]{
   background: rgba(0,0,0,.14);
   color: var(--text);
   outline:none;
+  font-size:14px;
 }
 
 [data-theme="light"] .input,
@@ -1044,6 +1045,7 @@ button.pill.btn { cursor: pointer; }
 .taskOption input{
   margin: 0;
 }
+
 
 
 
