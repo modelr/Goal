@@ -80,20 +80,20 @@ boot().catch(err => hardFail(err));
 
 async function boot() {
   installGuards();
-  if (ui.history) {␊
-    ui.history.addEventListener("click", (e) => {␊
-      const btn = e.target.closest("[data-role='historyDelete']");␊
-      if (!btn) return;␊
-      const key = btn.dataset.historyKey;␊
-      if (!key) return;␊
-      state = deleteHistoryEntry(state, key);␊
-      state = markOpened(state);␊
-      renderAll(ui, state);␊
-      scheduleSave();␊
-    });␊
-  }␊
-␊
-  ui.btnLogin.addEventListener("click", async () => {␊
+  if (ui.history) {
+    ui.history.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-role='historyDelete']");
+      if (!btn) return;
+      const key = btn.dataset.historyKey;
+      if (!key) return;
+      state = deleteHistoryEntry(state, key);
+      state = markOpened(state);
+      renderAll(ui, state);
+      scheduleSave();
+    });
+  }
+
+  ui.btnLogin.addEventListener("click", async () => {
 
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) return;
@@ -1348,6 +1348,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
