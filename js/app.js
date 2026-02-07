@@ -5,15 +5,12 @@ import {
   lastActionAt, deleteHistoryEntry
 } from "./state.js";
 import {
-  getDeviceId,
   loadActiveArea,
-  loadGuestState,
   loadRemoteState,
-  loadUserStateLocal,
   saveActiveArea,
-  saveGuestState,
   saveRemoteState,
-  saveUserStateLocal
+  loadLocalStateForArea,
+  saveLocalStateForArea
 } from "./storage.js";
 import {
   bindUI,
@@ -36,7 +33,7 @@ const ui = bindUI();
 const supabase = safeCreateSupabase();
 let state = null;
 let user = null;
-let mode = "guest";
+let mode = "local";
 let cloudReady = false;
 let isDirty = false;
 let lastSaveOk = null;
@@ -59,7 +56,6 @@ let conflictResolving = false;
 let syncInProgress = false;
 let loginActionInProgress = false;
 let activeArea = normalizeArea(loadActiveArea() || DEFAULT_AREA);
-const deviceId = getDeviceId();
 let saveTimer = null;
 
 function normalizeArea(area) {
@@ -183,7 +179,7 @@ async function handleAuthRedirect() {
 async function connectAndCompare({ reason = "" } = {}) {
   if (!supabase) {
     if (!state) {
-      loadGuestStateForArea();
+      loadLocalStateForActiveArea();
     }
     cloudReady = false;
     syncLoginButtonLabel();
@@ -206,10 +202,10 @@ async function connectAndCompare({ reason = "" } = {}) {
     if (user) {
       setAuthStage(ui, { text: "Загружаем данные…", visible: true, showRetry: false });
       await syncOnConnect();
-      mode = "remote";
+      mode = "cloud";
     } else {
-      mode = "guest";
-      loadGuestStateForArea();
+      mode = "local";
+      loadLocalStateForActiveArea();
     }
   } catch (err) {
     console.error(err);
@@ -231,14 +227,14 @@ async function connectAndCompare({ reason = "" } = {}) {
 function handleSignedOut() {
   user = null;
   cloudReady = false;
-  mode = "guest";
+  mode = "local";
   dataChoicePending = false;
   isDirty = false;
   if (saveTimer) {
     clearTimeout(saveTimer);
     saveTimer = null;
   }
-  loadGuestStateForArea();
+  loadLocalStateForActiveArea();
   syncLoginButtonLabel();
   setModeInfo(ui, { mode, user, cloudReady, localSaveOk });
   updateNetBadge();
@@ -251,12 +247,22 @@ function handleSignedOut() {
   }, AUTH_STATUS_HIDE_DELAY_MS);
 }
 
-function loadGuestStateForArea() {
-  const guestRaw = loadGuestState(deviceId, activeArea);
-  const guestState = guestRaw ? normalizeState(guestRaw) : defaultState();
-  state = markOpened(normalizeState(guestState));
-  mode = "guest";
+function loadLocalStateForActiveArea() {
+  const localRaw = loadLocalStateForArea(activeArea);
+  const localState = localRaw ? normalizeState(localRaw) : null;
+  const hasLocal = hasMeaningfulState(localState);
+  const nextState = hasLocal ? localState : defaultState();
+  state = markOpened(normalizeState(nextState));
+  mode = "local";
   isDirty = false;
+
+  if (!hasLocal) {
+    const localRes = saveLocalStateForArea(activeArea, state, { skipGuard: true });
+    localSaveOk = !!localRes?.ok;
+    lastSaveOk = localSaveOk;
+    isDirty = !localSaveOk;
+    return;
+  }
   localSaveOk = true;
   lastSaveOk = true;
 }
@@ -264,15 +270,56 @@ function loadGuestStateForArea() {
 async function syncOnConnect() {
   if (!user) return;
   const canUseCloud = navigator.onLine;
-  const localRaw = loadUserStateLocal(user.id, activeArea);
+  const localRaw = loadLocalStateForArea(activeArea);
   const localState = localRaw ? normalizeState(localRaw) : null;
-  const remote = canUseCloud ? await loadRemoteState(supabase, user.id, activeArea) : null;
+  if (!canUseCloud) {
+    const finalState = localState || defaultState();
+    state = markOpened(normalizeState(finalState));
+    const localRes = saveLocalStateForArea(activeArea, state, { skipGuard: true });
+    localSaveOk = !!localRes?.ok;
+    isDirty = !localSaveOk;
+    lastSaveOk = false;
+    return;
+  }
+
+  const remote = await loadRemoteState(supabase, user.id, activeArea);
   const remoteState = remote?.state ? normalizeState(remote.state) : null;
   const localHas = hasMeaningfulState(localState);
-  const remoteHas = hasMeaningfulState(remoteState);
-  const hasDiff = canUseCloud && (localHas || remoteHas) && !statesEqual(localState, remoteState);
+  const cloudHas = hasMeaningfulState(remoteState);
+  const equal = statesEqual(localState, remoteState);
 
-  if (hasDiff && !conflictResolving) {
+  if (cloudHas && !localHas) {
+    state = markOpened(normalizeState(remoteState));
+    const localRes = saveLocalStateForArea(activeArea, state, { skipGuard: true });
+    localSaveOk = !!localRes?.ok;
+    isDirty = !localSaveOk;
+    lastSaveOk = localSaveOk;
+    return;
+  }
+
+  if (localHas && !cloudHas) {
+    state = markOpened(normalizeState(localState));
+    const localRes = saveLocalStateForArea(activeArea, state, { skipGuard: true });
+    localSaveOk = !!localRes?.ok;
+    isDirty = !localSaveOk;
+    const res = await saveRemoteState(supabase, user.id, activeArea, state, { skipGuard: true });
+    lastSaveOk = res.ok;
+    if (!res.ok) {
+      isDirty = true;
+    }
+    return;
+  }
+
+  if (!localHas && !cloudHas) {
+    state = markOpened(normalizeState(defaultState()));
+    const localRes = saveLocalStateForArea(activeArea, state, { skipGuard: true });
+    localSaveOk = !!localRes?.ok;
+    isDirty = !localSaveOk;
+    lastSaveOk = localSaveOk;
+    return;
+  }
+
+  if (localHas && cloudHas && !equal && !conflictResolving) {
     dataChoicePending = true;
     const diffSections = buildDiffSummary(localState, remoteState);
     renderDiffList(ui, diffSections);
@@ -284,13 +331,9 @@ async function syncOnConnect() {
     return;
   }
 
-  const finalState = remoteHas
-    ? remoteState
-    : localHas
-      ? localState
-      : defaultState();
+  const finalState = localState || remoteState || defaultState();
   state = markOpened(normalizeState(finalState));
-  const localRes = saveUserStateLocal(user.id, activeArea, state, { skipGuard: true });
+  const localRes = saveLocalStateForArea(activeArea, state, { skipGuard: true });
   localSaveOk = !!localRes?.ok;
   isDirty = !localSaveOk;
   lastSaveOk = localSaveOk;
@@ -315,16 +358,16 @@ async function switchArea(newArea) {
     if (navigator.onLine) {
       await syncOnConnect();
     } else {
-      const localRaw = loadUserStateLocal(user.id, targetArea);
+      const localRaw = loadLocalStateForArea(targetArea);
       const nextState = localRaw ? normalizeState(localRaw) : defaultState();
       state = markOpened(normalizeState(nextState));
       localSaveOk = true;
       lastSaveOk = false;
       isDirty = false;
     }
-    mode = "remote";
+    mode = "cloud";
   } else {
-    loadGuestStateForArea();
+    loadLocalStateForActiveArea();
   }
 
   cloudReady = !!user && navigator.onLine;
@@ -894,10 +937,7 @@ function sanitizeMandatoryGoalValue(value, maxLength) {
 }
 
 function saveLocalSnapshot(nextState) {
-  if (user) {
-    return saveUserStateLocal(user.id, activeArea, nextState, { skipGuard: true });
-  }
-  return saveGuestState(deviceId, activeArea, nextState, { skipGuard: true });
+  return saveLocalStateForArea(activeArea, nextState, { skipGuard: true });
 }
 
 function toggleMandatoryGoalPopover() {
@@ -1048,24 +1088,6 @@ function hasMeaningfulState(state) {
   if (Array.isArray(state?.history) && state.history.length > 0) return true;
   if (state?.todayNote && String(state.todayNote).trim()) return true;
   return false;
-}
-
-function pickLocalState(guestState, userLocalState) {
-  const guestHas = hasMeaningfulState(guestState);
-  const userHas = hasMeaningfulState(userLocalState);
-  if (guestHas && userHas) {
-    const guestLast = lastActionAt(guestState);
-    const userLast = lastActionAt(userLocalState);
-    if (userLast === guestLast) {
-      return { state: guestState, source: "guest" };
-    }
-    return userLast > guestLast
-      ? { state: userLocalState, source: "user" }
-      : { state: guestState, source: "guest" };
-  }
-  if (guestHas) return { state: guestState, source: "guest" };
-  if (userHas) return { state: userLocalState, source: "user" };
-  return { state: null, source: "none" };
 }
 
 function normalizeForCompare(state) {
@@ -1316,4 +1338,5 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
