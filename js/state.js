@@ -16,7 +16,7 @@ export function defaultState() {
     },
     dailyGoals: [{ id: uid(), text: "", doneToday: false, isDaily: false }],
     todayNote: "",
-    // история: массив записей␊
+    // история: массив записей
     history: [], // {ts, type, payload}
   };
 }
@@ -200,6 +200,7 @@ export function computeStreak(history) {
 
   return { streak, todayCounted };
 }
+
 
 
 
