@@ -717,6 +717,15 @@ textarea{
 .historyTitle{
   margin-bottom: 6px;
 }
+.historyHeader{
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.historyHeader .historyTitle{
+  margin-bottom: 0;
+}
 .entry,
 .histCard{
   border:1px solid var(--line);
@@ -886,6 +895,25 @@ textarea{
   box-shadow: 0 12px 40px rgba(0,0,0,.35);
 }
 .modalRow{ display: grid; gap: 10px; }
+
+.historyExportOptions{
+  gap: 6px;
+}
+
+.historyExportOption{
+  align-items: center;
+}
+
+.historyExportRange{
+  display: none;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.historyExportRange.is-active{
+  display: grid;
+}
+
 button.pill.btn { cursor: pointer; }
 
 .commentHint{
@@ -1016,6 +1044,7 @@ button.pill.btn { cursor: pointer; }
 .taskOption input{
   margin: 0;
 }
+
 
 
 
