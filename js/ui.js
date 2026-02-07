@@ -444,7 +444,7 @@ export function renderGoals(ui, state) {
 
     const label = document.createElement("div");
     label.className = "pill mutedPill";
-    label.textContent = `Цель #${idx + 1}`;
+    label.textContent = `Задача №${idx + 1}`;
 
     const daily = document.createElement("label");
     daily.className = "pill goalAction";
@@ -597,13 +597,13 @@ export function renderHistory(ui, state) {
 
     if (e.type === "delete_goal") {
       const text = e.payload?.text || "";
-      addLine(body, "Удалена цель:", `«${text}»`);
+      addLine(body, "Удалена задача:", `«${text}»`);
     } else if (e.type === "done_goal") {
       const text = e.payload?.text || "";
       const comment = e.payload?.comment || "";
       const isDaily = !!e.payload?.isDaily;
       const statusLabel = (e.payload?.statusLabel || "").trim();
-      const label = statusLabel || (isDaily ? "Сделана ежедневная цель" : "Сделана цель");
+      const label = statusLabel || (isDaily ? "Сделана ежедневная задача" : "Сделана задача");
       addLine(body, `${label}:`, `«${text}»`);
       if (comment) {
         addLine(body, "Комментарий:", comment);
@@ -652,6 +652,7 @@ export function scrollHistoryToDay(ui, key) {
     behavior: "smooth",
   });
 }
+
 
 
 
