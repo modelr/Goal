@@ -1,10 +1,8 @@
 import { SUPABASE } from "./config.js";
 import { nowMs } from "./state.js";
 
-const DEVICE_KEY = "mr_device_id";
 const ACTIVE_AREA_KEY = "goal_active_area";
-const GUEST_KEY_PREFIX = "goal_guest_";
-const USER_KEY_PREFIX = "goal_user_";
+const LOCAL_KEY_PREFIX = "goal_local_";
 const BACKUP_INDEX_PREFIX = "goal_backup_index_";
 const REMOTE_TIMEOUT_MS = 8000;
 
@@ -22,28 +20,6 @@ function withTimeout(promise, ms, label) {
   });
 }
 
-export function getDeviceId() {
-  try {
-    const existing = localStorage.getItem(DEVICE_KEY);
-    if (existing) return existing;
-    const uuid = typeof crypto !== "undefined" && crypto.randomUUID
-      ? crypto.randomUUID()
-      : `${Math.random().toString(16).slice(2)}-${Date.now().toString(16)}`;
-    localStorage.setItem(DEVICE_KEY, uuid);
-    return uuid;
-  } catch {
-    return `${Math.random().toString(16).slice(2)}-${Date.now().toString(16)}`;
-  }
-}
-
-export function guestStorageKey(deviceId, area) {
-  return `${GUEST_KEY_PREFIX}${deviceId}_${area}`;
-}
-
-export function userStorageKey(userId, area) {
-  return `${USER_KEY_PREFIX}${userId}_${area}`;
-}
-
 export function loadActiveArea() {
   try {
     return localStorage.getItem(ACTIVE_AREA_KEY);
@@ -58,42 +34,16 @@ export function saveActiveArea(area) {
   } catch {}
 }
 
-export function loadGuestState(deviceId, area) {
-  const key = guestStorageKey(deviceId, area);
-  const existing = loadLocalState(key);
-  if (isMeaningfulState(existing)) return existing;
-  if (area === "business") {
-    const legacyKey = `${GUEST_KEY_PREFIX}${deviceId}`;
-    const legacyState = loadLocalState(legacyKey);
-    if (isMeaningfulState(legacyState) && !isMeaningfulState(existing)) {
-      return migrateLegacyState({ legacyKey, newKey: key });
-    }
-    return existing || legacyState;
-  }
-  return existing;
+export function localStorageKey(area) {
+  return `${LOCAL_KEY_PREFIX}${area}`;
 }
 
-export function loadUserStateLocal(userId, area) {
-  const key = userStorageKey(userId, area);
-  const existing = loadLocalState(key);
-  if (isMeaningfulState(existing)) return existing;
-  if (area === "business") {
-    const legacyKey = `${USER_KEY_PREFIX}${userId}`;
-    const legacyState = loadLocalState(legacyKey);
-    if (isMeaningfulState(legacyState) && !isMeaningfulState(existing)) {
-      return migrateLegacyState({ legacyKey, newKey: key });
-    }
-    return existing || legacyState;
-  }
-  return existing;
+export function loadLocalStateForArea(area) {
+  return loadLocalState(localStorageKey(area));
 }
 
-export function saveGuestState(deviceId, area, state, options = {}) {
-  return saveLocalState(guestStorageKey(deviceId, area), state, options);
-}
-
-export function saveUserStateLocal(userId, area, state, options = {}) {
-  return saveLocalState(userStorageKey(userId, area), state, options);
+export function saveLocalStateForArea(area, state, options = {}) {
+  return saveLocalState(localStorageKey(area), state, options);
 }
 
 export async function loadRemoteState(supabase, userId, area) {
@@ -140,7 +90,7 @@ export async function loadRemoteState(supabase, userId, area) {
 export async function saveRemoteState(supabase, userId, area, state, options = {}) {
   if (!supabase || !userId || !area) return { ok: false, reason: "no-user" };
 
-  const cached = loadUserStateLocal(userId, area);
+  const cached = loadLocalStateForArea(area);
   if (!options.skipGuard && shouldBlockEmptySave(state, cached)) {
     console.warn("[storage] Skip remote save: empty state would overwrite non-empty cache.");
     return { ok: false, reason: "empty-guard" };
@@ -232,17 +182,6 @@ function loadLocalState(key) {
   }
 }
 
-function migrateLegacyState({ legacyKey, newKey }) {
-  if (!legacyKey || !newKey) return null;
-  const legacyState = loadLocalState(legacyKey);
-  if (!legacyState) return null;
-  const res = saveLocalState(newKey, legacyState, { skipGuard: true });
-  if (res?.ok) {
-    try { localStorage.removeItem(legacyKey); } catch {}
-  }
-  return legacyState;
-}
-
 function saveLocalState(key, state, options = {}) {
   if (!key) return { ok: false, reason: "no-key" };
   const existing = loadLocalState(key);
@@ -280,6 +219,7 @@ function isMeaningfulState(state) {
   if (state?.todayNote && String(state.todayNote).trim()) return true;
   return false;
 }
+
 
 
 
