@@ -136,7 +136,7 @@ export function setOnlineBadge(
 export function setModeInfo(ui, { mode, user, cloudReady, localSaveOk }) {
   if (user) {
     if (cloudReady) {
-      ui.modeInfo.textContent = `Облачный режим (Supabase). Пользователь: ${user.email || user.id}`;
+      ui.modeInfo.textContent = `Локально + облако (Supabase). Пользователь: ${user.email || user.id}`;
       return;
     }
     const localStatus = localSaveOk === false
@@ -146,9 +146,9 @@ export function setModeInfo(ui, { mode, user, cloudReady, localSaveOk }) {
     return;
   }
   ui.modeInfo.textContent =
-    mode === "guest"
-      ? "Гостевой режим (данные привязаны к браузеру)."
-      : "Войдите, чтобы данные сохранялись в облаке.";
+    mode === "local"
+      ? "Локальное хранилище на этом устройстве."
+      : "Войдите, чтобы включить облачную синхронизацию.";
 }
 
 export function setAuthStage(ui, { text, showRetry = false, visible = true } = {}) {
@@ -651,6 +651,7 @@ export function scrollHistoryToDay(ui, key) {
     behavior: "smooth",
   });
 }
+
 
 
 
