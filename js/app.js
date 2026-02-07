@@ -81,6 +81,13 @@ boot().catch(err => hardFail(err));
 async function boot() {
   installGuards();
   wireEvents();
+  initHistoryExport({
+    ui,
+    getState: () => state,
+    getActiveArea: () => activeArea,
+    getAreaLabel: areaLabel,
+    toast: (message) => toast(ui, message),
+  });
 
   document.addEventListener("visibilitychange", () => {
     if (document.hidden) return;
@@ -1335,6 +1342,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
