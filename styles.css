@@ -268,7 +268,7 @@ h1{
 /* Grid */
 .grid{
   display:grid;
-  grid-template-columns: 5fr 2fr;
+  grid-template-columns: 1.5fr 1fr;
   gap: 14px;
   align-items: stretch;
   min-height: calc(100vh - 220px);
@@ -1044,6 +1044,7 @@ button.pill.btn { cursor: pointer; }
 .taskOption input{
   margin: 0;
 }
+
 
 
 
