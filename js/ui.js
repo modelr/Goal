@@ -29,6 +29,7 @@ export function bindUI() {
     calendar: el("calendar"),
     historyDoneCount: el("historyDoneCount"),
     history: el("history"),
+    historyPdfBtn: el("historyPdfBtn"),
 
     toast: el("toast"),
 	
@@ -651,6 +652,7 @@ export function scrollHistoryToDay(ui, key) {
     behavior: "smooth",
   });
 }
+
 
 
 
