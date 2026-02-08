@@ -1,4 +1,4 @@
-import { computeStreak, dayKey, historyKey, lastActionAt, daysMapFromHistory } from "./state.js";
+import { computeStreak, dayKey, historyKey, lastActionAt } from "./state.js";
 
 export function bindUI() {
   const el = (id) => document.getElementById(id);
@@ -35,7 +35,11 @@ export function bindUI() {
 
     streakCount: el("streakCount"),
     todayBadge: el("todayBadge"),
-    calendar: el("calendar"),
+    dayChips: el("dayChips"),
+    dayProgressControls: el("dayProgressControls"),
+    dayJumpBack: el("dayJumpBack"),
+    dayJumpToday: el("dayJumpToday"),
+    dayJumpForward: el("dayJumpForward"),
     historyDoneCount: el("historyDoneCount"),
     history: el("history"),
     historyPdfBtn: el("historyPdfBtn"),
@@ -277,13 +281,12 @@ export function hideDataChoiceModal(ui) {
   document.documentElement.classList.remove("modalOpen");
 }
 
-
-export function renderAll(ui, state) {
+export function renderAll(ui, state, { activeDayIndex = null } = {}) {
   renderMeta(ui, state);
   renderMandatoryGoal(ui, state);
   renderPrinciples(ui, state);
   renderGoals(ui, state);
-  renderStreak(ui, state);
+  renderStreak(ui, state, { activeDayIndex });
   renderHistory(ui, state);
   requestAnimationFrame(() => syncHistoryHeight(ui));
 }
@@ -530,32 +533,165 @@ export function renderGoals(ui, state) {
   });
 }
 
-export function renderStreak(ui, state) {
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
+function startOfLocalDay(date) {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function parseDayKeyToDate(key) {
+  if (!key) return null;
+  const [y, m, d] = key.split("-").map(Number);
+  if (!y || !m || !d) return null;
+  return new Date(y, m - 1, d);
+}
+
+export function getDayProgressData(state) {
+  const history = Array.isArray(state?.history) ? state.history : [];
+  const minTs = history.reduce((min, entry) => Math.min(min, entry?.ts || min), Infinity);
+  const fallbackTs = state?.mandatoryGoal?.createdAt || state?.principles?.createdAt || state?.lastOpenAt || Date.now();
+  const start = startOfLocalDay(isFinite(minTs) ? new Date(minTs) : new Date(fallbackTs));
+  const today = startOfLocalDay(new Date());
+  const diff = Math.max(0, Math.floor((today - start) / MS_PER_DAY));
+  const totalDays = diff + 1;
+  const dayStats = dayStatsFromHistory(history);
+
+  return {
+    startDate: start,
+    today,
+    totalDays,
+    dayStats,
+  };
+}
+
+function getVisibleChipCount() {
+  const width = window.innerWidth || 1200;
+  if (width <= 520) return 8;
+  if (width <= 720) return 10;
+  if (width <= 920) return 14;
+  return 21;
+}
+
+export function getDayChipStep() {
+  return Math.max(6, getVisibleChipCount() - 2);
+}
+
+function buildDayChipRange(activeDayIndex, totalDays) {
+  const maxVisible = Math.max(6, getVisibleChipCount());
+  if (totalDays <= maxVisible) {
+    return { start: 1, end: totalDays, showStartEllipsis: false, showEndEllipsis: false };
+  }
+  const half = Math.floor(maxVisible / 2);
+  let start = Math.max(1, activeDayIndex - half);
+  let end = start + maxVisible - 1;
+  if (end > totalDays) {
+    end = totalDays;
+    start = Math.max(1, end - maxVisible + 1);
+  }
+  return {
+    start,
+    end,
+    showStartEllipsis: start > 2,
+    showEndEllipsis: end < totalDays - 1,
+  };
+}
+
+function dayStatsFromHistory(history = []) {
+  const map = new Map();
+  for (const e of history) {
+    const key = dayKey(e.ts);
+    const stat = map.get(key) || { any: false, done: 0 };
+    stat.any = true;
+    if (e?.type === "done_goal") stat.done += 1;
+    map.set(key, stat);
+  }
+  return map;
+}
+
+export function renderStreak(ui, state, { activeDayIndex = null } = {}) {
   const s = computeStreak(state.history);
   ui.streakCount.textContent = String(s.streak);
   ui.todayBadge.textContent = s.todayCounted ? "Сегодня засчитан ✅" : "Сегодня ещё не засчитан";
 
-  // календарь: последние 28 дней
-  ui.calendar.innerHTML = "";
-  const days = daysMapFromHistory(state.history);
-  const today = new Date();
-  // 28 дней, включая сегодня
-  for (let i = 27; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    const key = dayKey(d.getTime());
+  if (!ui.dayChips) return;
 
-    const cell = document.createElement("div");
-    cell.className = "calCell";
-    cell.textContent = String(d.getDate());
-    cell.dataset.dayKey = key;
-    cell.setAttribute("role", "button");
-    cell.setAttribute("tabindex", "0");
-    cell.setAttribute("aria-label", d.toLocaleDateString("ru-RU"));
-    // закрашиваем, если есть любая запись в этот день
-    if (days.has(key)) cell.classList.add("on");
-    ui.calendar.appendChild(cell);
+  const data = getDayProgressData(state);
+  const totalDays = data.totalDays;
+  const visibleCount = getVisibleChipCount();
+  const showControls = totalDays > visibleCount;
+  const step = getDayChipStep();
+  const safeActive = Math.min(Math.max(activeDayIndex || totalDays, 1), totalDays);
+  ui.dayChips.innerHTML = "";
+  ui.dayChips.classList.toggle("is-compact", !showControls);
+
+  const range = buildDayChipRange(safeActive, totalDays);
+  const appendEllipsis = () => {
+    const ellipsis = document.createElement("span");
+    ellipsis.className = "dayChip dayChipEllipsis";
+    ellipsis.textContent = "…";
+    ellipsis.setAttribute("aria-hidden", "true");
+    ui.dayChips.appendChild(ellipsis);
+  };
+  const appendChip = (index) => {
+    const date = new Date(data.startDate);
+    date.setDate(date.getDate() + (index - 1));
+    const key = dayKey(date.getTime());
+    const stat = data.dayStats.get(key);
+    const counted = !!stat?.any;
+    const doneCount = stat?.done || 0;
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "dayChip";
+    chip.dataset.dayIndex = String(index);
+    chip.dataset.dayKey = key;
+    chip.textContent = String(index);
+    chip.setAttribute("aria-pressed", index === safeActive ? "true" : "false");
+    chip.title = `День ${index}${counted ? " — засчитан" : " — не засчитан"}`;
+    if (counted) chip.classList.add("is-counted");
+    if (index === safeActive) chip.classList.add("is-active");
+    if (doneCount > 0) {
+      const badge = document.createElement("span");
+      badge.className = "dayChipCount";
+      badge.textContent = String(doneCount);
+      chip.appendChild(badge);
+    }
+    ui.dayChips.appendChild(chip);
+  };
+
+  if (range.start > 1) {
+    appendChip(1);
+    if (range.showStartEllipsis) appendEllipsis();
   }
+
+  for (let index = range.start; index <= range.end; index++) {
+    appendChip(index);
+  }
+
+  if (range.end < totalDays) {
+    if (range.showEndEllipsis) appendEllipsis();
+    appendChip(totalDays);
+  }
+
+  if (ui.dayProgressControls) ui.dayProgressControls.hidden = !showControls;
+  if (ui.dayJumpBack) {
+    ui.dayJumpBack.disabled = safeActive <= 1;
+    ui.dayJumpBack.textContent = `⟵ -${step}`;
+  }
+  if (ui.dayJumpForward) {
+    ui.dayJumpForward.disabled = safeActive >= totalDays;
+    ui.dayJumpForward.textContent = `+${step} ⟶`;
+  }
+
+  requestAnimationFrame(() => {
+    const activeChip = ui.dayChips.querySelector(".dayChip.is-active");
+    if (!activeChip) return;
+    const container = ui.dayChips;
+    const containerCenter = container.clientWidth / 2;
+    const targetCenter = activeChip.offsetLeft + activeChip.offsetWidth / 2;
+    container.scrollLeft = Math.max(0, targetCenter - containerCenter);
+  });
 }
 
 export function renderHistory(ui, state) {
@@ -596,6 +732,8 @@ export function renderHistory(ui, state) {
       group = document.createElement("div");
       group.className = "histDay";
       group.dataset.dayKey = key;
+      const dayStart = startOfLocalDay(e.ts);
+      group.dataset.dayTs = String(dayStart.getTime());
 
       const title = document.createElement("div");
       title.className = "histDayTitle";
@@ -681,7 +819,24 @@ export function renderHistory(ui, state) {
 export function scrollHistoryToDay(ui, key) {
   if (!ui?.history || !key) return;
   const group = ui.history.querySelector(`.histDay[data-day-key="${key}"]`);
-  const target = group?.querySelector(".histDayTitle");
+  let target = group?.querySelector(".histDayTitle");
+
+  if (!target) {
+    const targetDate = parseDayKeyToDate(key);
+    const targetTs = targetDate ? startOfLocalDay(targetDate).getTime() : null;
+    const dayGroups = Array.from(ui.history.querySelectorAll(".histDay"));
+    if (targetTs !== null && dayGroups.length) {
+      const sorted = dayGroups
+        .map((item) => ({
+          node: item,
+          ts: Number(item.dataset.dayTs || 0),
+        }))
+        .sort((a, b) => a.ts - b.ts);
+      const next = sorted.find((item) => item.ts >= targetTs) || sorted[sorted.length - 1];
+      target = next?.node?.querySelector(".histDayTitle") || null;
+    }
+  }
+
   if (!target) return;
   const containerRect = ui.history.getBoundingClientRect();
   const targetRect = target.getBoundingClientRect();
