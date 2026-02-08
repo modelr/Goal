@@ -177,7 +177,7 @@ h1{
 }
 
 .goalSummaryText .goalInfoButton{
-  margin-left: 6px;
+  margin-left: 0px;
 }
 
 .goalPopover{
@@ -1174,6 +1174,7 @@ button.pill.btn { cursor: pointer; }
 .taskOption input{
   margin: 0;
 }
+
 
 
 
