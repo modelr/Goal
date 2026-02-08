@@ -374,7 +374,7 @@ export function renderMandatoryGoal(ui, state) {
   const hasGoal = Boolean(title && metric && why);
   const shortTitle = title.length > 48 ? `${title.slice(0, 48).trim()}…` : title;
 
-  ui.mandatoryGoalSummaryText.textContent = hasGoal ? `: “${shortTitle}”` : "—";
+  ui.mandatoryGoalSummaryText.textContent = hasGoal ? `:\u00A0“${shortTitle}”` : "—";
   if (ui.mandatoryGoalActionBtn) {
     ui.mandatoryGoalActionBtn.textContent = "Моя цель";
     ui.mandatoryGoalActionBtn.hidden = hasGoal;
@@ -846,6 +846,7 @@ export function scrollHistoryToDay(ui, key) {
     behavior: "smooth",
   });
 }
+
 
 
 
