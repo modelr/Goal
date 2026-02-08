@@ -87,6 +87,12 @@ header,
   gap:12px;
 }
 
+.goalSummaryStack{
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .logo{
   width:42px;
   height:42px;
@@ -195,6 +201,23 @@ h1{
   gap: 12px;
   max-width: 560px;
   font-size: 14px;
+}
+
+.mgTipList{
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+}
+
+.mgTipList li{
+  color: rgba(255,255,255,.88);
+  line-height: 1.5;
+}
+
+.mgTipList li::marker{
+  content: "- ";
+  color: rgba(255,255,255,.65);
 }
 
 .mgTipSection{
@@ -781,6 +804,7 @@ textarea{
 .histText{
   margin-left: 6px;
   color: var(--muted);
+  white-space: pre-line;
 }
 .histDelete{
   position: absolute;
@@ -1050,6 +1074,7 @@ button.pill.btn { cursor: pointer; }
 .taskOption input{
   margin: 0;
 }
+
 
 
 
