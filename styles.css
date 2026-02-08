@@ -575,9 +575,17 @@ textarea{
 
   .goalSummary{
     flex-wrap: nowrap;
+    align-items: baseline;
+  }
+
+  .goalSummaryButton{
+    flex: 0 0 auto;
   }
 
   .goalSummaryText{
+    flex: 1 1 auto;
+    min-width: 0;
+    display: block;
     white-space: normal;
     overflow: visible;
     text-overflow: initial;
@@ -588,6 +596,16 @@ textarea{
     white-space: normal;
     overflow: visible;
     text-overflow: initial;
+    overflow-wrap: anywhere;
+  }
+
+  .goalSummaryText .goalInfoButton{
+    margin-left: 0;
+    vertical-align: middle;
+  }
+
+  .goalSummaryText .goalInfoButton::before{
+    content: "\00a0";
   }
 }
 
@@ -1174,6 +1192,7 @@ button.pill.btn { cursor: pointer; }
 .taskOption input{
   margin: 0;
 }
+
 
 
 
