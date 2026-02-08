@@ -1,7 +1,7 @@
 import { createSupabaseClient } from "./supabaseClient.js";
 import {
   defaultState, normalizeState, addGoal, deleteGoal,
-  markOpened, completeGoal,
+  markOpened, completeGoal, dayKey,
   lastActionAt, deleteHistoryEntry
 } from "./state.js";
 import {
@@ -25,7 +25,10 @@ import {
   setActiveAreaButtons,
   showDataChoiceModal,
   hideDataChoiceModal,
-  renderDiffList
+  renderDiffList,
+  renderStreak,
+  getDayProgressData,
+  getDayChipStep
 } from "./ui.js";
 import { initHistoryExport } from "./historyExport.js";
 import { APP, AREAS } from "./config.js";
@@ -59,6 +62,7 @@ let syncInProgress = false;
 let loginActionInProgress = false;
 let activeArea = normalizeArea(loadActiveArea() || DEFAULT_AREA);
 let saveTimer = null;
+let activeDayIndex = null;
 
 function normalizeArea(area) {
   const normalized = String(area || "").toLowerCase();
@@ -75,6 +79,33 @@ function setActiveArea(area) {
   activeArea = normalizeArea(area);
   saveActiveArea(activeArea);
   setActiveAreaButtons(ui, activeArea);
+}
+
+function ensureActiveDayIndex() {
+  if (!state) return;
+  const data = getDayProgressData(state);
+  if (!activeDayIndex || activeDayIndex > data.totalDays) {
+    activeDayIndex = data.totalDays;
+  }
+  if (activeDayIndex < 1) activeDayIndex = 1;
+}
+
+function selectDayIndex(index, { scroll = true } = {}) {
+  if (!state) return;
+  const data = getDayProgressData(state);
+  if (index < 1 || index > data.totalDays) return;
+  activeDayIndex = index;
+  renderStreak(ui, state, { activeDayIndex });
+  if (!scroll) return;
+  const targetDate = new Date(data.startDate);
+  targetDate.setDate(targetDate.getDate() + (index - 1));
+  const key = dayKey(targetDate.getTime());
+  scrollHistoryToDay(ui, key);
+}
+
+function renderAllWithDayIndex() {
+  ensureActiveDayIndex();
+  renderAll(ui, state, { activeDayIndex });
 }
 
 boot().catch(err => hardFail(err));
@@ -129,7 +160,7 @@ async function boot() {
 
   debug(`BOOT: renderAll OK`, {
     goalsListChildren: ui.goalsList.children.length,
-    calendarChildren: ui.calendar.children.length
+    dayChipsChildren: ui.dayChips?.children.length ?? 0
   });
 }
 
@@ -219,7 +250,7 @@ async function connectAndCompare({ reason = "" } = {}) {
     setModeInfo(ui, { mode, user, cloudReady, localSaveOk });
     updateNetBadge();
     if (state) {
-      renderAll(ui, state);
+      renderAllWithDayIndex();
       scrollToTop();
     }
     setTimeout(() => {
@@ -244,7 +275,7 @@ function handleSignedOut() {
   setModeInfo(ui, { mode, user, cloudReady, localSaveOk });
   updateNetBadge();
   if (state) {
-    renderAll(ui, state);
+    renderAllWithDayIndex();
     scrollToTop();
   }
   setTimeout(() => {
@@ -378,7 +409,7 @@ async function switchArea(newArea) {
   cloudReady = !!user && navigator.onLine;
   setModeInfo(ui, { mode, user, cloudReady, localSaveOk });
   updateNetBadge();
-  renderAll(ui, state);
+  renderAllWithDayIndex();
   scrollToTop();
 }
 
@@ -549,23 +580,65 @@ function wireEvents() {
   ui.btnAddGoal.addEventListener("click", () => {
     state = addGoal(state);
     state = markOpened(state);
-    renderAll(ui, state);
+    renderAllWithDayIndex();
     scheduleSave();
   });
 
-  if (ui.calendar) {
-    ui.calendar.addEventListener("click", (e) => {
-      const cell = e.target.closest(".calCell");
-      if (!cell?.dataset?.dayKey) return;
-      scrollHistoryToDay(ui, cell.dataset.dayKey);
+  if (ui.dayChips) {
+    ui.dayChips.addEventListener("click", (e) => {
+      const chip = e.target.closest(".dayChip");
+      if (!chip?.dataset?.dayIndex) return;
+      selectDayIndex(Number(chip.dataset.dayIndex));
     });
 
-    ui.calendar.addEventListener("keydown", (e) => {
+    ui.dayChips.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        ensureActiveDayIndex();
+        selectDayIndex(activeDayIndex - 1);
+        return;
+      }
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        ensureActiveDayIndex();
+        selectDayIndex(activeDayIndex + 1);
+        return;
+      }
       if (e.key !== "Enter" && e.key !== " ") return;
-      const cell = e.target.closest(".calCell");
-      if (!cell?.dataset?.dayKey) return;
+      const chip = e.target.closest(".dayChip");
+      if (!chip?.dataset?.dayIndex) return;
       e.preventDefault();
-      scrollHistoryToDay(ui, cell.dataset.dayKey);
+      selectDayIndex(Number(chip.dataset.dayIndex));
+    });
+
+    ui.dayChips.addEventListener("wheel", (e) => {
+      if (!ui.dayChips) return;
+      if (ui.dayChips.classList.contains("is-compact")) return;
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+      e.preventDefault();
+      ui.dayChips.scrollLeft += e.deltaY;
+    }, { passive: false });
+  }
+
+  if (ui.dayJumpBack) {
+    ui.dayJumpBack.addEventListener("click", () => {
+      ensureActiveDayIndex();
+      selectDayIndex(activeDayIndex - getDayChipStep());
+    });
+  }
+
+  if (ui.dayJumpToday) {
+    ui.dayJumpToday.addEventListener("click", () => {
+      if (!state) return;
+      const data = getDayProgressData(state);
+      selectDayIndex(data.totalDays);
+    });
+  }
+
+  if (ui.dayJumpForward) {
+    ui.dayJumpForward.addEventListener("click", () => {
+      ensureActiveDayIndex();
+      selectDayIndex(activeDayIndex + getDayChipStep());
     });
   }
 
@@ -577,7 +650,7 @@ function wireEvents() {
       if (!key) return;
       state = deleteHistoryEntry(state, key);
       state = markOpened(state);
-      renderAll(ui, state);
+      renderAllWithDayIndex();
       scheduleSave();
     });
   }
@@ -664,7 +737,7 @@ function wireEvents() {
         : (g.isDaily ? "Сделана ежедневная цель" : "Сделана цель");
       state = completeGoal(state, goalId, { comment, keepGoal, statusLabel });
       state = markOpened(state);
-      renderAll(ui, state);
+      renderAllWithDayIndex();
       scheduleSave();
       closeCommentModal();
     });
@@ -680,7 +753,7 @@ function wireEvents() {
       if (!deleteGoalId) return closeDeleteGoalModal();
       state = deleteGoal(state, deleteGoalId);
       state = markOpened(state);
-      renderAll(ui, state);
+      renderAllWithDayIndex();
       scheduleSave();
       closeDeleteGoalModal();
     });
@@ -1006,7 +1079,7 @@ function handlePrinciplesSave() {
     payload: { items },
   }, ...(state.history || [])];
   state = markOpened(state);
-  renderAll(ui, state);
+  renderAllWithDayIndex();
   scheduleSave();
   closePrinciplesModal({ reason: "save" });
 }
@@ -1059,7 +1132,7 @@ function handleMandatoryGoalSave() {
     updatedAt: now,
   };
   state = markOpened(state);
-  renderAll(ui, state);
+  renderAllWithDayIndex();
   scheduleSave();
   closeMandatoryGoalModal({ reason: "save" });
 }
@@ -1520,6 +1593,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
