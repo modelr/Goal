@@ -703,8 +703,8 @@ textarea{
 }
 .dayChipCount{
   position: absolute;
-  right: 6px;
-  bottom: 6px;
+  right: 2px;
+  bottom: 2px;
   font-size: 10px;
   line-height: 1;
   padding: 2px 5px;
@@ -1109,6 +1109,7 @@ button.pill.btn { cursor: pointer; }
 .taskOption input{
   margin: 0;
 }
+
 
 
 
