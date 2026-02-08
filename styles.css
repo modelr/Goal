@@ -66,7 +66,7 @@ html.modalOpen{
 header,
 .topbar{
   display:flex;
-  align-items:center;
+  align-items:flex-start;
   justify-content:space-between;
   gap: 12px;
   margin-bottom: 18px;
@@ -83,7 +83,7 @@ header,
 
 .brand{
   display:flex;
-  align-items:center;
+  align-items:flex-start;
   gap:12px;
 }
 
@@ -118,7 +118,7 @@ h1{
 
 .goalSummary{
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 2px;
   flex-wrap: nowrap;
   position: relative;
@@ -136,13 +136,18 @@ h1{
   text-decoration: underline;
   text-underline-offset: 3px;
   white-space: nowrap;
+  line-height: 1.2;
 }
 
 .goalSummaryText{
   color: var(--muted);
   flex: 1 1 auto;
   min-width: 0;
-  display: block;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+  line-height: 1.2;
 }
 
 .goalSummaryValue{
@@ -1169,6 +1174,7 @@ button.pill.btn { cursor: pointer; }
 .taskOption input{
   margin: 0;
 }
+
 
 
 
