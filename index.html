@@ -67,7 +67,14 @@
           <span id="todayBadge" class="pill mutedPill">Сегодня ещё не засчитан</span>
         </div>
 
-        <div id="calendar" class="calendar"></div>
+        <div class="dayProgress">
+          <div class="row dayProgressControls" id="dayProgressControls">
+            <button class="pill btn ghost" id="dayJumpBack" type="button">⟵ -7</button>
+            <button class="pill btn" id="dayJumpToday" type="button">Сегодня</button>
+            <button class="pill btn ghost" id="dayJumpForward" type="button">+7 ⟶</button>
+          </div>
+          <div id="dayChips" class="dayChips" tabindex="0" aria-label="Прогресс по дням"></div>
+        </div>
 
         <div class="sep"></div>
 
@@ -226,6 +233,7 @@
   <script type="module" src="./js/app.js"></script>
 </body>
 </html>
+
 
 
 
