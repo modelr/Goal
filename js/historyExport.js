@@ -126,7 +126,7 @@ function buildHistoryPdfHtml(history, { areaId, areaLabel, generatedAt }) {
         .card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
         .time { font-weight: 600; margin-bottom: 6px; }
         ul { margin: 0; padding-left: 18px; }
-        li { margin-bottom: 6px; }
+        li { margin-bottom: 6px; white-space: pre-line; }
         li:last-child { margin-bottom: 0; }
         .label { font-weight: 600; color: #4f46e5; margin-right: 6px; }
         @media print { body { margin: 12mm; } }
@@ -211,6 +211,11 @@ function buildEntryLines(entry) {
       lines.push({ label: "Сделано сегодня:", text: entry.payload.note });
     }
     return lines.length ? lines : [{ label: "Сохранение:", text: "—" }];
+  }
+  if (entry.type === "save_principles") {
+    const items = Array.isArray(entry.payload?.items) ? entry.payload.items : [];
+    const text = items.length ? items.map(item => `- ${item}`).join("\n") : "—";
+    return [{ label: "Принципы:", text }];
   }
   return [{ label: "Неизвестное событие:", text: entry.type || "—" }];
 }
@@ -449,4 +454,5 @@ function bindModal(modal, toast) {
 function getSelectedFilter(radioInputs) {
   const selected = radioInputs.find((input) => input.checked);
   return selected?.value || "all";
+
 }
