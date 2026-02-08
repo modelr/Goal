@@ -207,6 +207,7 @@ function isMeaningfulState(state) {
   if (state?.mandatoryGoal?.title) return true;
   if (state?.mandatoryGoal?.metric) return true;
   if (state?.mandatoryGoal?.why) return true;
+  if (Array.isArray(state?.principles?.items) && state.principles.items.length > 0) return true;
   if (Array.isArray(state?.dailyGoals)) {
     const goalHasData = state.dailyGoals.some(goal =>
       (goal?.text && String(goal.text).trim()) ||
@@ -219,6 +220,7 @@ function isMeaningfulState(state) {
   if (state?.todayNote && String(state.todayNote).trim()) return true;
   return false;
 }
+
 
 
 
