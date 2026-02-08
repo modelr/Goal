@@ -135,7 +135,7 @@ function buildHistoryPdfHtml(history, {
         h1 { margin: 0 0 8px; font-size: 24px; }
         .meta { color: #6b7280; margin-bottom: 24px; }
         .metaRow { margin-bottom: 6px; }
-        .sectionTitle { font-size: 20px; text-transform: none; letter-spacing: .08em; color: #6b7280; margin: 0 0 12px; }
+        .sectionTitle { font-size: 20px; text-transform: none; letter-spacing: normal; color: inherit; margin: 0 0 12px; }
         .section { margin-bottom: 24px; }
         .sectionContent { margin: 0; }
         .sectionContent + .sectionContent { margin-top: 8px; }
@@ -594,6 +594,7 @@ function getSelectedFilter(radioInputs) {
   return selected?.value || "all";
 
 }
+
 
 
 
