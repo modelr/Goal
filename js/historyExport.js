@@ -135,12 +135,12 @@ function buildHistoryPdfHtml(history, {
         h1 { margin: 0 0 8px; font-size: 24px; }
         .meta { color: #6b7280; margin-bottom: 24px; }
         .metaRow { margin-bottom: 6px; }
-        .sectionTitle { font-size: 14px; text-transform: uppercase; letter-spacing: .08em; color: #6b7280; margin: 0 0 12px; }
+        .sectionTitle { font-size: 24px; text-transform: uppercase; letter-spacing: .08em; color: #6b7280; margin: 0 0 12px; }
         .section { margin-bottom: 24px; }
         .sectionContent { margin: 0; }
         .sectionContent + .sectionContent { margin-top: 8px; }
         .goalLabel { font-weight: 600; margin-right: 6px; }
-        .summary { padding: 12px 14px; border: 1px solid #d1d5db; border-radius: 10px; background: #f9fafb; font-weight: 600; margin-bottom: 28px; }
+        .summary { padding: 12px 14px; border: 1px solid #d1d5db; border-radius: 10px; background: #f9fafb; font-size: 18px; font-weight: 600; margin-bottom: 28px; }
         .historyTitle { margin-top: 8px; }
         .day { margin-bottom: 28px; }
         .day h2 { font-size: 14px; text-transform: uppercase; letter-spacing: .08em; color: #6b7280; margin: 0 0 12px; }
@@ -594,4 +594,5 @@ function getSelectedFilter(radioInputs) {
   return selected?.value || "all";
 
 }
+
 
