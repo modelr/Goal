@@ -14,23 +14,16 @@
       <div class="brand">
         <div class="logo"></div>
         <div class="goalSummaryStack">
-          <h1>Goal</h1>
-          <div class="goalSummary">
-            <div class="goalActionWrap">
-              <button id="mandatoryGoalActionBtn" class="goalSummaryButton" type="button">Моя цель</button>
-              <span id="mandatoryGoalActionText" class="goalActionText">Заполни цель</span>
-            </div>
+          <div class="subtitle goalSummary" id="mandatoryGoalSummary">
+            <button class="goalSummaryButton" id="mandatoryGoalSummaryBtn" type="button">Моя цель</button>
+            <span class="goalSummaryText" id="mandatoryGoalSummaryText">—</span>
+            <button class="goalInfoButton" id="mandatoryGoalInfoBtn" type="button" aria-label="Детали обязательной цели" hidden>ℹ️</button>
+            <div class="goalPopover" id="mandatoryGoalPopover" role="dialog" aria-live="polite" hidden></div>
           </div>
-          <div class="goalSummary">
-            <button id="mandatoryGoalSummaryBtn" class="goalSummaryButton" type="button">Моя главная цель</button>
-            <span id="mandatoryGoalSummaryText" class="goalSummaryText">—</span>
-            <button id="mandatoryGoalInfoBtn" class="goalInfoButton" type="button" aria-label="Подробнее о цели">i</button>
-            <div id="mandatoryGoalPopover" class="goalPopover" hidden></div>
-          </div>
-          <div class="goalSummary">
-            <button id="principlesSummaryBtn" class="goalSummaryButton" type="button">Принципы</button>
-            <button id="principlesInfoBtn" class="goalInfoButton" type="button" aria-label="Принципы цели">i</button>
-            <div id="principlesPopover" class="goalPopover" hidden></div>
+          <div class="subtitle goalSummary" id="principlesSummary">
+            <button class="goalSummaryButton" id="principlesSummaryBtn" type="button">Принципы</button>
+            <button class="goalInfoButton" id="principlesInfoBtn" type="button" aria-label="Детали принципов" hidden>ℹ️</button>
+            <div class="goalPopover" id="principlesPopover" role="dialog" aria-live="polite" hidden></div>
           </div>
         </div>
       </div>
@@ -233,6 +226,7 @@
   <script type="module" src="./js/app.js"></script>
 </body>
 </html>
+
 
 
 
