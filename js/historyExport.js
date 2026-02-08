@@ -27,34 +27,40 @@ export function initHistoryExport({
   });
 
   modalState.onConfirm(async ({ filterId, fromDate, toDate }) => {
-    const history = getState()?.history || [];
-    if (!history.length) {
-      toast("История пуста — нечего выгружать.");
-      return;
-    }
+    const state = getState() || {};
+    const rawHistory = state.history;
+    const history = Array.isArray(rawHistory) ? rawHistory : [];
 
-    const filtered = applyHistoryFilter(history, {
-      filterId,
-      fromDate,
-      toDate,
-    });
+    let filtered = history;
+    if (history.length) {
+      filtered = applyHistoryFilter(history, {
+        filterId,
+        fromDate,
+        toDate,
+      });
 
-    if (!filtered.length) {
-      toast("Нет записей за выбранный период.");
-      return;
-    }
+      if (!filtered.length) {
+        toast("Нет записей за выбранный период.");
+        return;
+      }
 
-    if (filtered.length > EXPORT_WARNING_THRESHOLD) {
-      toast("Экспорт может занять время.");
+      if (filtered.length > EXPORT_WARNING_THRESHOLD) {
+        toast("Экспорт может занять время.");
+      }
     }
 
     const areaId = getActiveArea();
     const areaLabel = getAreaLabel(areaId);
     const generatedAt = formatDateTime(new Date());
+    const mandatoryGoal = state.mandatoryGoal || {};
+    const principles = state.principles?.items || [];
     const html = buildHistoryPdfHtml(filtered, {
       areaId,
       areaLabel,
       generatedAt,
+      mandatoryGoal,
+      principles,
+      summaryHistory: history,
     });
 
     openHistoryPdf(html, toast);
@@ -102,10 +108,18 @@ function applyHistoryFilter(history, { filterId, fromDate, toDate }) {
   });
 }
 
-function buildHistoryPdfHtml(history, { areaId, areaLabel, generatedAt }) {
+function buildHistoryPdfHtml(history, {
+  areaId,
+  areaLabel,
+  generatedAt,
+  mandatoryGoal,
+  principles,
+  summaryHistory,
+}) {
   const groups = groupHistory(history);
   const dayKeys = Object.keys(groups).sort((a, b) => b.localeCompare(a));
   const total = history.length;
+  const summary = getHistorySummary(summaryHistory || history);
   const sections = dayKeys.map((key) => renderDaySection(key, groups[key])).join("");
 
   return `
@@ -121,6 +135,13 @@ function buildHistoryPdfHtml(history, { areaId, areaLabel, generatedAt }) {
         h1 { margin: 0 0 8px; font-size: 24px; }
         .meta { color: #6b7280; margin-bottom: 24px; }
         .metaRow { margin-bottom: 6px; }
+        .sectionTitle { font-size: 14px; text-transform: uppercase; letter-spacing: .08em; color: #6b7280; margin: 0 0 12px; }
+        .section { margin-bottom: 24px; }
+        .sectionContent { margin: 0; }
+        .sectionContent + .sectionContent { margin-top: 8px; }
+        .goalLabel { font-weight: 600; margin-right: 6px; }
+        .summary { padding: 12px 14px; border: 1px solid #d1d5db; border-radius: 10px; background: #f9fafb; font-weight: 600; margin-bottom: 28px; }
+        .historyTitle { margin-top: 8px; }
         .day { margin-bottom: 28px; }
         .day h2 { font-size: 14px; text-transform: uppercase; letter-spacing: .08em; color: #6b7280; margin: 0 0 12px; }
         .card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px 14px; margin-bottom: 10px; }
@@ -129,6 +150,8 @@ function buildHistoryPdfHtml(history, { areaId, areaLabel, generatedAt }) {
         li { margin-bottom: 6px; white-space: pre-line; }
         li:last-child { margin-bottom: 0; }
         .label { font-weight: 600; color: #4f46e5; margin-right: 6px; }
+        .avoidBreak { break-inside: avoid; page-break-inside: avoid; }
+        .noOrphan { break-after: avoid; page-break-after: avoid; }
         @media print { body { margin: 12mm; } }
       </style>
     </head>
@@ -139,6 +162,10 @@ function buildHistoryPdfHtml(history, { areaId, areaLabel, generatedAt }) {
         <div class="metaRow">Сформировано: ${escapeHtml(generatedAt)}</div>
         <div class="metaRow">Записей в выгрузке: ${escapeHtml(total)}</div>
       </div>
+      ${renderGoalSection(mandatoryGoal)}
+      ${renderPrinciplesSection(principles)}
+      ${renderSummary(summary)}
+      <h2 class="sectionTitle historyTitle noOrphan">История</h2>
       ${sections}
       <script>
         window.addEventListener("load", () => {
@@ -150,10 +177,91 @@ function buildHistoryPdfHtml(history, { areaId, areaLabel, generatedAt }) {
   `;
 }
 
+function renderGoalSection(mandatoryGoal) {
+  const title = String(mandatoryGoal?.title || "").trim();
+  const metric = firstNonEmpty([
+    mandatoryGoal?.metric,
+    mandatoryGoal?.result,
+    mandatoryGoal?.outcome,
+    mandatoryGoal?.target,
+  ]);
+  const why = String(mandatoryGoal?.why || "").trim();
+  const minStep = String(mandatoryGoal?.minStep || "").trim();
+  const rows = [];
+
+  if (title) {
+    rows.push(`<p class="sectionContent">${escapeHtml(title)}</p>`);
+  }
+  if (metric) {
+    rows.push(`<p class="sectionContent"><span class="goalLabel">Результат:</span>${escapeHtml(metric)}</p>`);
+  }
+  if (why) {
+    rows.push(`<p class="sectionContent"><span class="goalLabel">Почему важно:</span>${escapeHtml(why)}</p>`);
+  }
+  if (minStep) {
+    rows.push(`<p class="sectionContent"><span class="goalLabel">Минимальный шаг:</span>${escapeHtml(minStep)}</p>`);
+  }
+
+  const body = rows.length
+    ? rows.join("")
+    : `<p class="sectionContent">Цель не заполнена.</p>`;
+
+  return `
+    <section class="section avoidBreak">
+      <h2 class="sectionTitle noOrphan">Моя цель</h2>
+      ${body}
+    </section>
+  `;
+}
+
+function renderPrinciplesSection(principles) {
+  const items = normalizePrinciples(principles);
+  const body = items.length
+    ? `<ul>${items.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
+    : `<p class="sectionContent">Принципы не заполнены.</p>`;
+
+  return `
+    <section class="section avoidBreak">
+      <h2 class="sectionTitle noOrphan">Принципы</h2>
+      ${body}
+    </section>
+  `;
+}
+
+function renderSummary(summary) {
+  return `
+    <div class="summary avoidBreak">
+      Для достижения цели понадобилось ${escapeHtml(summary.days)} дней и выполнено ${escapeHtml(summary.completed)} задач
+    </div>
+  `;
+}
+
+function normalizePrinciples(principles) {
+  if (!Array.isArray(principles)) return [];
+  return principles
+    .map((item) => {
+      if (typeof item === "string") return item;
+      if (item?.text) return String(item.text);
+      return "";
+    })
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function firstNonEmpty(values) {
+  for (const value of values) {
+    const text = String(value ?? "").trim();
+    if (text) return text;
+  }
+  return "";
+}
+
 function groupHistory(history) {
   const sorted = [...history].sort((a, b) => (a?.ts || 0) - (b?.ts || 0));
   return sorted.reduce((acc, entry) => {
-    const key = dayKey(entry.ts);
+    const ts = typeof entry?.ts === "number" ? entry.ts : null;
+    if (ts === null) return acc;
+    const key = dayKey(ts);
     if (!acc[key]) acc[key] = [];
     acc[key].push(entry);
     return acc;
@@ -169,6 +277,36 @@ function renderDaySection(dayKeyValue, entries) {
       ${cards}
     </section>
   `;
+}
+
+function getHistorySummary(history) {
+  if (!Array.isArray(history) || !history.length) {
+    return { days: 0, completed: 0 };
+  }
+
+  let minTs = Infinity;
+  let maxTs = -Infinity;
+  let completed = 0;
+
+  for (const entry of history) {
+    const ts = typeof entry?.ts === "number" ? entry.ts : null;
+    if (ts !== null) {
+      if (ts < minTs) minTs = ts;
+      if (ts > maxTs) maxTs = ts;
+    }
+    if (entry?.type === "done_goal") {
+      completed += 1;
+    }
+  }
+
+  if (!Number.isFinite(minTs) || !Number.isFinite(maxTs)) {
+    return { days: 0, completed };
+  }
+
+  const start = startOfDay(new Date(minTs)).getTime();
+  const end = startOfDay(new Date(maxTs)).getTime();
+  const diffDays = Math.floor((end - start) / 86400000);
+  return { days: diffDays + 1, completed };
 }
 
 function renderEntry(entry) {
@@ -456,3 +594,4 @@ function getSelectedFilter(radioInputs) {
   return selected?.value || "all";
 
 }
+
