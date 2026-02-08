@@ -13,16 +13,9 @@
     <header class="topbar">
       <div class="brand">
         <div class="logo"></div>
-        <div>
-          <div class="title">Goal</div>
-          <div class="subtitle goalSummary" id="mandatoryGoalSummary">
-            <button class="goalSummaryButton" id="mandatoryGoalSummaryBtn" type="button">Моя цель</button>
-            <span class="goalSummaryText" id="mandatoryGoalSummaryText">—</span>
-            <button class="goalInfoButton" id="mandatoryGoalInfoBtn" type="button" aria-label="Детали обязательной цели" hidden>ℹ️</button>
-            <div class="goalPopover" id="mandatoryGoalPopover" role="dialog" aria-live="polite" hidden></div>
-          </div>
-        </div>
-      </div>
+    <div class="modalBackdrop" id="mandatoryGoalModal" hidden>␊
+      <div class="modal modalWide modalSplit" role="dialog" aria-modal="true" aria-labelledby="mandatoryGoalTitle">␊
+        <div class="modalHeader">␊
 
       <div class="actions actionsStack">
         <div class="actionsRow">
@@ -123,7 +116,7 @@
     <div class="modalBackdrop" id="deleteGoalModal" hidden>
       <div class="modal" role="dialog" aria-modal="true" aria-labelledby="deleteGoalTitle">
         <h3 id="deleteGoalTitle">Удалить задачу?</h3>
-        <p class="muted">Задача будет удалена из списка и добавлена в историю.</p>
+        <p class="muted">Задача будет удалена из списка и добавлена в историю</p>
         <div class="muted small" id="deleteGoalText">—</div>
         <div class="row">
           <button class="btn danger" id="deleteGoalConfirmBtn">Удалить</button>
@@ -157,7 +150,7 @@
       <div class="modal modalWide modalSplit" role="dialog" aria-modal="true" aria-labelledby="mandatoryGoalTitle">
         <div class="modalHeader">
           <h3 id="mandatoryGoalTitle">Моя главная цель</h3>
-          <p class="muted">Заполни основные поля — и цель появится в шапке.</p>
+          <p class="muted">Заполни основные поля — и цель появится в шапке</p>
         </div>
         <div class="modalContent">
           <div class="modalRow">
@@ -192,6 +185,27 @@
       </div>
     </div>
 
+    <div class="modalBackdrop" id="principlesModal" hidden>
+      <div class="modal modalWide modalSplit" role="dialog" aria-modal="true" aria-labelledby="principlesTitle">
+        <div class="modalHeader">
+          <h3 id="principlesTitle">Принципы для достижения цели</h3>
+          <p class="muted">Узнавай и добавляй принципы (аксиомы) для достижения цели</p>
+        </div>
+        <div class="modalContent">
+          <div class="modalRow" id="principlesFields"></div>
+          <div class="row">
+            <button class="btn ghost" id="principlesAddBtn" type="button">+ Добавить принцип</button>
+          </div>
+        </div>
+        <div class="modalFooter">
+          <div class="row">
+            <button class="btn purple" id="principlesSaveBtn">Сохранить</button>
+            <button class="btn" id="principlesCancelBtn">Отмена</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 
   <!-- libs -->
@@ -201,6 +215,7 @@
   <script type="module" src="./js/app.js"></script>
 </body>
 </html>
+
 
 
 
