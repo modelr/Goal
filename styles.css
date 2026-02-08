@@ -81,15 +81,20 @@ header,
   box-shadow: var(--shadow);
 }
 
-.brand{
+.topbar .brand{
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.brand:not(.heroHeader){
   display:flex;
   align-items:flex-start;
   gap:12px;
 }
 
-.heroHeader{
+.brand.heroHeader{
   display: grid;
-  grid-template-columns: 56px 1fr;
+  grid-template-columns: 56px minmax(0, 1fr);
   column-gap: 14px;
   align-items: center;
 }
@@ -581,8 +586,8 @@ textarea{
   .row > .btn{ width:100%; justify-content:center; }
   .row.actionsSplit{ flex-wrap:wrap; }
 
-  .heroHeader{
-    grid-template-columns: 48px 1fr;
+  .brand.heroHeader{
+    grid-template-columns: 48px minmax(0, 1fr);
     column-gap: 10px;
   }
 }
@@ -1203,6 +1208,7 @@ button.pill.btn { cursor: pointer; }
 .taskOption input{
   margin: 0;
 }
+
 
 
 
