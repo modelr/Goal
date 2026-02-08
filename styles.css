@@ -762,6 +762,44 @@ textarea{
   flex: 1 1 auto;
   min-height: 0;
   scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(124,58,237,.65) rgba(255,255,255,.08);
+}
+.hist::-webkit-scrollbar,
+.history::-webkit-scrollbar{
+  width: 10px;
+}
+.hist::-webkit-scrollbar-track,
+.history::-webkit-scrollbar-track{
+  background: rgba(255,255,255,.06);
+  border-radius: 999px;
+}
+.hist::-webkit-scrollbar-thumb,
+.history::-webkit-scrollbar-thumb{
+  background: linear-gradient(180deg, rgba(124,58,237,.85), rgba(34,197,94,.65));
+  border-radius: 999px;
+  border: 2px solid rgba(0,0,0,.25);
+}
+.hist::-webkit-scrollbar-thumb:hover,
+.history::-webkit-scrollbar-thumb:hover{
+  background: linear-gradient(180deg, rgba(124,58,237,.95), rgba(34,197,94,.8));
+}
+[data-theme="light"] .hist,
+[data-theme="light"] .history{
+  scrollbar-color: rgba(249,115,22,.75) rgba(0,0,0,.08);
+}
+[data-theme="light"] .hist::-webkit-scrollbar-track,
+[data-theme="light"] .history::-webkit-scrollbar-track{
+  background: rgba(0,0,0,.06);
+}
+[data-theme="light"] .hist::-webkit-scrollbar-thumb,
+[data-theme="light"] .history::-webkit-scrollbar-thumb{
+  background: linear-gradient(180deg, rgba(249,115,22,.85), rgba(251,191,36,.75));
+  border: 2px solid rgba(255,255,255,.45);
+}
+[data-theme="light"] .hist::-webkit-scrollbar-thumb:hover,
+[data-theme="light"] .history::-webkit-scrollbar-thumb:hover{
+  background: linear-gradient(180deg, rgba(249,115,22,.95), rgba(251,191,36,.9));
 }
 .historyCard{
   display:flex;
@@ -1109,6 +1147,7 @@ button.pill.btn { cursor: pointer; }
 .taskOption input{
   margin: 0;
 }
+
 
 
 
