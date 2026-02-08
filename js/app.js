@@ -46,6 +46,7 @@ let dataChoiceResolve = null;
 let dataChoicePromise = null;
 let mandatoryGoalReturnFocusEl = null;
 let deleteGoalReturnFocusEl = null;
+let principlesReturnFocusEl = null;
 const THEME_KEY = "goal-theme";
 
 
@@ -490,6 +491,25 @@ function wireEvents() {
     });
   }
 
+  if (ui.principlesSummaryBtn) {
+    ui.principlesSummaryBtn.addEventListener("click", () => {
+      openPrinciplesModal();
+    });
+  }
+
+  if (ui.principlesInfoBtn) {
+    ui.principlesInfoBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      togglePrinciplesPopover();
+    });
+  }
+
+  if (ui.principlesAddBtn) {
+    ui.principlesAddBtn.addEventListener("click", () => {
+      appendPrinciplesInput();
+    });
+  }
+
   // goals list delegation
   ui.goalsList.addEventListener("input", (e) => {
     const t = e.target;
@@ -685,6 +705,18 @@ function wireEvents() {
     });
   }
 
+  if (ui.principlesSaveBtn && ui.principlesModal) {
+    ui.principlesSaveBtn.addEventListener("click", () => {
+      handlePrinciplesSave();
+    });
+  }
+
+  if (ui.principlesCancelBtn && ui.principlesModal) {
+    ui.principlesCancelBtn.addEventListener("click", () => {
+      closePrinciplesModal({ reason: "cancel" });
+    });
+  }
+
     if (ui.dataChoiceCloudBtn) {
     ui.dataChoiceCloudBtn.addEventListener("click", () => {
       if (conflictResolving) return;
@@ -767,13 +799,27 @@ function wireEvents() {
     });
   }
 
+  if (ui.principlesModal) {
+    ui.principlesModal.addEventListener("click", (e) => {
+      if (e.target === ui.principlesModal) {
+        closePrinciplesModal({ reason: "backdrop" });
+      }
+    });
+  }
+
   window.addEventListener("keydown", (e) => {
     if (e.key !== "Escape") return;
     if (ui.mandatoryGoalPopover && !ui.mandatoryGoalPopover.hidden) {
       ui.mandatoryGoalPopover.hidden = true;
     }
+    if (ui.principlesPopover && !ui.principlesPopover.hidden) {
+      ui.principlesPopover.hidden = true;
+    }
     if (ui.mandatoryGoalModal?.classList.contains("show")) {
       closeMandatoryGoalModal({ reason: "escape" });
+    }
+    if (ui.principlesModal?.classList.contains("show")) {
+      closePrinciplesModal({ reason: "escape" });
     }
     if (ui.deleteGoalModal?.classList.contains("show")) {
       closeDeleteGoalModal({ reason: "escape" });
@@ -785,6 +831,13 @@ function wireEvents() {
     if (ui.mandatoryGoalPopover.contains(e.target)) return;
     if (ui.mandatoryGoalInfoBtn?.contains(e.target)) return;
     ui.mandatoryGoalPopover.hidden = true;
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!ui.principlesPopover || ui.principlesPopover.hidden) return;
+    if (ui.principlesPopover.contains(e.target)) return;
+    if (ui.principlesInfoBtn?.contains(e.target)) return;
+    ui.principlesPopover.hidden = true;
   });
 
   if (ui.dataChoiceModal) {
@@ -881,6 +934,83 @@ function closeMandatoryGoalModal({ reason } = {}) {
   mandatoryGoalReturnFocusEl = null;
 }
 
+function openPrinciplesModal() {
+  if (!ui.principlesModal) return;
+  principlesReturnFocusEl = document.activeElement;
+  if (ui.principlesPopover) {
+    ui.principlesPopover.hidden = true;
+  }
+  renderPrinciplesInputs(state?.principles?.items || []);
+  ui.principlesModal.hidden = false;
+  ui.principlesModal.classList.add("show");
+  document.body.classList.add("modalOpen");
+  document.documentElement.classList.add("modalOpen");
+  const firstInput = ui.principlesFields?.querySelector("input");
+  if (firstInput) firstInput.focus();
+}
+
+function closePrinciplesModal({ reason } = {}) {
+  if (!ui.principlesModal) return;
+  ui.principlesModal.classList.remove("show");
+  ui.principlesModal.hidden = true;
+  document.body.classList.remove("modalOpen");
+  document.documentElement.classList.remove("modalOpen");
+  if (reason === "cancel" || reason === "escape" || reason === "backdrop") {
+    if (principlesReturnFocusEl && typeof principlesReturnFocusEl.focus === "function") {
+      principlesReturnFocusEl.focus();
+    }
+  }
+  principlesReturnFocusEl = null;
+}
+
+function renderPrinciplesInputs(items) {
+  if (!ui.principlesFields) return;
+  ui.principlesFields.innerHTML = "";
+  const values = Array.isArray(items) && items.length ? items : [""];
+  values.forEach((value) => {
+    appendPrinciplesInput(String(value ?? ""));
+  });
+}
+
+function appendPrinciplesInput(value = "") {
+  if (!ui.principlesFields) return;
+  const input = document.createElement("input");
+  input.className = "input";
+  input.type = "text";
+  input.maxLength = 200;
+  input.placeholder = "Новый принцип";
+  input.value = value;
+  ui.principlesFields.appendChild(input);
+}
+
+function getPrinciplesInputValues() {
+  if (!ui.principlesFields) return [];
+  const inputs = Array.from(ui.principlesFields.querySelectorAll("input"));
+  return inputs
+    .map((input) => String(input.value || "").trim())
+    .filter(Boolean);
+}
+
+function handlePrinciplesSave() {
+  const items = getPrinciplesInputValues();
+  const now = Date.now();
+  const existing = state?.principles || {};
+  state.principles = {
+    items,
+    createdAt: existing.createdAt || now,
+    updatedAt: now,
+  };
+  state.history = [{
+    ts: now,
+    type: "save_principles",
+    payload: { items },
+  }, ...(state.history || [])];
+  state = markOpened(state);
+  renderAll(ui, state);
+  scheduleSave();
+  closePrinciplesModal({ reason: "save" });
+}
+
 function clearMandatoryGoalErrors() {
   setMandatoryGoalFieldError(ui.mandatoryGoalTitleInput, ui.mandatoryGoalTitleError, false);
   setMandatoryGoalFieldError(ui.mandatoryGoalMetricInput, ui.mandatoryGoalMetricError, false);
@@ -953,6 +1083,15 @@ function toggleMandatoryGoalPopover() {
   }
 }
 
+function togglePrinciplesPopover() {
+  if (!ui.principlesPopover) return;
+  const willShow = ui.principlesPopover.hidden;
+  ui.principlesPopover.hidden = !willShow;
+  if (willShow) {
+    setPrinciplesPopoverWidth();
+  }
+}
+
 function setMandatoryGoalPopoverWidth() {
   if (!ui.mandatoryGoalPopover || !ui.mainCard) return;
   const summaryEl = ui.mandatoryGoalPopover.parentElement;
@@ -964,6 +1103,19 @@ function setMandatoryGoalPopoverWidth() {
   const maxWidth = viewportWidth - summaryRect.left - 16;
   const width = Math.max(0, Math.min(desiredWidth, maxWidth));
   ui.mandatoryGoalPopover.style.width = `${width}px`;
+}
+
+function setPrinciplesPopoverWidth() {
+  if (!ui.principlesPopover || !ui.mainCard) return;
+  const summaryEl = ui.principlesPopover.parentElement;
+  if (!summaryEl) return;
+  const summaryRect = summaryEl.getBoundingClientRect();
+  const mainRect = ui.mainCard.getBoundingClientRect();
+  const viewportWidth = document.documentElement.clientWidth;
+  const desiredWidth = Math.max(320, mainRect.right - summaryRect.left);
+  const maxWidth = viewportWidth - summaryRect.left - 16;
+  const width = Math.max(0, Math.min(desiredWidth, maxWidth));
+  ui.principlesPopover.style.width = `${width}px`;
 }
 
 function scheduleSave() {
@@ -1081,6 +1233,7 @@ function hasMeaningfulState(state) {
   if (state?.mandatoryGoal?.title) return true;
   if (state?.mandatoryGoal?.metric) return true;
   if (state?.mandatoryGoal?.why) return true;
+  if (Array.isArray(state?.principles?.items) && state.principles.items.length > 0) return true;
   if (Array.isArray(state?.dailyGoals)) {
     const goalHasData = state.dailyGoals.some(goal =>
       (goal?.text && String(goal.text).trim()) ||
@@ -1122,6 +1275,13 @@ function normalizeForCompare(state) {
       minStep: String(normalized.mandatoryGoal?.minStep || ""),
       createdAt: normalized.mandatoryGoal?.createdAt || null,
       updatedAt: normalized.mandatoryGoal?.updatedAt || null,
+    },
+    principles: {
+      items: Array.isArray(normalized.principles?.items)
+        ? normalized.principles.items.map(item => String(item ?? ""))
+        : [],
+      createdAt: normalized.principles?.createdAt || null,
+      updatedAt: normalized.principles?.updatedAt || null,
     },
     dailyGoals: goals,
     todayNote: String(normalized.todayNote || ""),
@@ -1167,6 +1327,7 @@ function buildDiffSummary(localState, cloudState) {
   const sections = [];
 
   sections.push(buildMandatoryGoalDiff(local, cloud));
+  sections.push(buildPrinciplesDiff(local, cloud));
   sections.push(buildGoalsDiff(local, cloud));
   sections.push(buildHistoryDiff(local, cloud));
   sections.push(buildActivityDiff(local, cloud));
@@ -1197,6 +1358,19 @@ function buildMandatoryGoalDiff(local, cloud) {
   return {
     title: "Обязательная цель",
     items: diffs,
+  };
+}
+
+function buildPrinciplesDiff(local, cloud) {
+  const localItems = Array.isArray(local.principles?.items) ? local.principles.items : [];
+  const cloudItems = Array.isArray(cloud.principles?.items) ? cloud.principles.items : [];
+  if (stableStringify(localItems) === stableStringify(cloudItems)) return null;
+  return {
+    title: "Принципы",
+    items: [
+      `Локально: ${localItems.length ? localItems.join(", ") : "—"}`,
+      `В облаке: ${cloudItems.length ? cloudItems.join(", ") : "—"}`,
+    ],
   };
 }
 
@@ -1300,7 +1474,11 @@ function historyKey(entry) {
 function formatHistoryEntry(entry) {
   const date = entry?.ts ? new Date(entry.ts).toLocaleString("ru-RU") : "—";
   const type = entry?.type || "—";
-  const text = entry?.payload?.text || entry?.payload?.note || entry?.payload?.focusGoal || "";
+  let text = entry?.payload?.text || entry?.payload?.note || entry?.payload?.focusGoal || "";
+  if (entry?.type === "save_principles") {
+    const items = Array.isArray(entry.payload?.items) ? entry.payload.items : [];
+    text = items.length ? items.join(", ") : "—";
+  }
   return `${date} — ${type}${text ? ` (${text})` : ""}`;
 }
 
@@ -1342,6 +1520,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
