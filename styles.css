@@ -87,6 +87,17 @@ header,
   gap:12px;
 }
 
+.heroHeader{
+  display: grid;
+  grid-template-columns: 56px 1fr;
+  column-gap: 14px;
+  align-items: center;
+}
+
+.heroTextCol{
+  min-width: 0;
+}
+
 .goalSummaryStack{
   display: flex;
   flex-direction: column;
@@ -117,17 +128,41 @@ h1{
 }
 
 .goalSummary{
-  display: flex;
-  align-items: baseline;
-  gap: 2px;
-  flex-wrap: nowrap;
   position: relative;
   min-width: 0;
-  justify-content: flex-start;
+}
+
+.heroGoalLine{
+  text-align: center;
+  line-height: 1.2;
+  margin: 0;
+  text-wrap: balance;
+}
+
+.heroGoalLine .goalSummaryButton{
+  display: inline;
+}
+
+.heroGoalLine .infoIcon{
+  vertical-align: middle;
+  margin-left: 6px;
+}
+
+.heroGoalLine .goalSummaryText{
+  display: inline-block;
+  margin-left: 6px;
+}
+
+.heroPrinciplesLine{
+  margin-top: 10px;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  align-items: center;
 }
 
 .goalSummaryButton{
-  background: none;
+  background: none;;
   border: none;
   color: var(--text);
   padding: 0;
@@ -141,12 +176,8 @@ h1{
 
 .goalSummaryText{
   color: var(--muted);
-  flex: 1 1 auto;
   min-width: 0;
-  display: inline-flex;
-  align-items: baseline;
-  gap: 6px;
-  flex-wrap: wrap;
+  display: inline;
   line-height: 1.2;
 }
 
@@ -174,10 +205,6 @@ h1{
   cursor: pointer;
   flex: 0 0 auto;
   vertical-align: middle;
-}
-
-.goalSummaryText .goalInfoButton{
-  margin-left: 0px;
 }
 
 .goalPopover{
@@ -553,6 +580,11 @@ textarea{
   .row{ align-items:stretch; }
   .row > .btn{ width:100%; justify-content:center; }
   .row.actionsSplit{ flex-wrap:wrap; }
+
+  .heroHeader{
+    grid-template-columns: 48px 1fr;
+    column-gap: 10px;
+  }
 }
 
 @media (max-width: 640px){
@@ -573,39 +605,18 @@ textarea{
     width: 100%;
   }
 
-  .goalSummary{
-    flex-wrap: nowrap;
-    align-items: baseline;
-  }
-
-  .goalSummaryButton{
-    flex: 0 0 auto;
-  }
-
-  .goalSummaryText{
-    flex: 1 1 auto;
-    min-width: 0;
-    display: block;
+  .heroGoalLine .goalSummaryText{
     white-space: normal;
-    overflow: visible;
-    text-overflow: initial;
   }
 
-  .goalSummaryValue{
+  .heroGoalLine .goalSummaryValue{
     display: inline;
+    min-width: 0;
+    max-width: 100%;
     white-space: normal;
     overflow: visible;
     text-overflow: initial;
     overflow-wrap: anywhere;
-  }
-
-  .goalSummaryText .goalInfoButton{
-    margin-left: 0;
-    vertical-align: middle;
-  }
-
-  .goalSummaryText .goalInfoButton::before{
-    content: "\00a0";
   }
 }
 
@@ -1192,6 +1203,7 @@ button.pill.btn { cursor: pointer; }
 .taskOption input{
   margin: 0;
 }
+
 
 
 
