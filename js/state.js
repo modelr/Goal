@@ -14,6 +14,11 @@ export function defaultState() {
       createdAt: null,
       updatedAt: null,
     },
+    principles: {
+      items: [],
+      createdAt: null,
+      updatedAt: null,
+    },
     dailyGoals: [{ id: uid(), text: "", doneToday: false, isDaily: false }],
     todayNote: "",
     // история: массив записей
@@ -50,6 +55,18 @@ export function normalizeState(s) {
   if (!out.mandatoryGoal.updatedAt && out.mandatoryGoal.createdAt) {
     out.mandatoryGoal.updatedAt = out.mandatoryGoal.createdAt;
   }
+
+  out.principles = { ...base.principles, ...(out.principles || {}) };
+  out.principles.items = Array.isArray(out.principles.items)
+    ? out.principles.items.map(item => String(item ?? "")).filter(Boolean)
+    : [];
+  if (out.principles.items.length && !out.principles.createdAt) {
+    out.principles.createdAt = nowMs();
+  }
+  if (!out.principles.updatedAt && out.principles.createdAt) {
+    out.principles.updatedAt = out.principles.createdAt;
+  }
+
 
   // dailyGoals: по дефолту одна
    if (!Array.isArray(out.dailyGoals) || out.dailyGoals.length === 0) {
@@ -200,6 +217,7 @@ export function computeStreak(history) {
 
   return { streak, todayCounted };
 }
+
 
 
 
