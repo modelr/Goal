@@ -17,6 +17,15 @@ export function bindUI() {
     mandatoryGoalSummaryText: el("mandatoryGoalSummaryText"),
     mandatoryGoalInfoBtn: el("mandatoryGoalInfoBtn"),
     mandatoryGoalPopover: el("mandatoryGoalPopover"),
+
+    principlesSummaryBtn: el("principlesSummaryBtn"),
+    principlesInfoBtn: el("principlesInfoBtn"),
+    principlesPopover: el("principlesPopover"),
+    principlesModal: el("principlesModal"),
+    principlesFields: el("principlesFields"),
+    principlesAddBtn: el("principlesAddBtn"),
+    principlesSaveBtn: el("principlesSaveBtn"),
+    principlesCancelBtn: el("principlesCancelBtn"),
 	  
     btnAddGoal: el("btnAddGoal"),
     ttlInfo: el("ttlInfo"),
@@ -272,6 +281,7 @@ export function hideDataChoiceModal(ui) {
 export function renderAll(ui, state) {
   renderMeta(ui, state);
   renderMandatoryGoal(ui, state);
+  renderPrinciples(ui, state);
   renderGoals(ui, state);
   renderStreak(ui, state);
   renderHistory(ui, state);
@@ -409,6 +419,28 @@ export function renderMandatoryGoal(ui, state) {
             </div>
           `)
           .join("")}
+      </div>
+    `;
+  }
+}
+
+export function renderPrinciples(ui, state) {
+  if (!ui.principlesInfoBtn) return;
+  const items = Array.isArray(state?.principles?.items) ? state.principles.items : [];
+  const hasItems = items.length > 0;
+
+  ui.principlesInfoBtn.hidden = !hasItems;
+
+  if (ui.principlesPopover) {
+    ui.principlesPopover.hidden = true;
+    if (!hasItems) {
+      ui.principlesPopover.innerHTML = "";
+      return;
+    }
+    const list = items.map(item => `<li>${escapeHtml(item)}</li>`).join("");
+    ui.principlesPopover.innerHTML = `
+      <div class="mgTip">
+        <ul class="mgTipList">${list}</ul>
       </div>
     `;
   }
@@ -616,6 +648,13 @@ export function renderHistory(ui, state) {
       if (p.note) {
         addLine(body, "Сделано сегодня:", p.note);
       }
+    } else if (e.type === "save_principles") {
+      const items = Array.isArray(e.payload?.items) ? e.payload.items : [];
+      if (items.length) {
+        addLine(body, "Принципы:", items.map(item => `- ${item}`).join("\n"));
+      } else {
+        addLine(body, "Принципы:", "—");
+      }
     } else {
       body.textContent = JSON.stringify(e, null, 2);
     }
@@ -652,6 +691,7 @@ export function scrollHistoryToDay(ui, key) {
     behavior: "smooth",
   });
 }
+
 
 
 
