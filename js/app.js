@@ -929,11 +929,25 @@ function wireEvents() {
   });
 }
 
+function getGoalById(goalId) {
+  for (const list of [state?.dailyGoals, state?.goals]) {
+    if (!Array.isArray(list)) continue;
+    const goal = list.find((item) => item.id === goalId);
+    if (goal) return goal;
+  }
+  return null;
+}
+
+function isDailyGoal(goal) {
+  return !!(goal?.isDaily ?? goal?.daily ?? goal?.everyday ?? goal?.isEveryday);
+}
+
 function openCommentModal(goalId) {
   if (!ui.commentModal) return;
+  const goal = getGoalById(goalId);
   commentModalGoalId = goalId;
   if (ui.commentInput) ui.commentInput.value = "";
-  if (ui.commentPartialCheckbox) ui.commentPartialCheckbox.checked = false;
+  if (ui.commentPartialCheckbox) ui.commentPartialCheckbox.checked = isDailyGoal(goal);
   ui.commentModal.hidden = false;
   ui.commentModal.classList.add("show");
   if (ui.commentInput) ui.commentInput.focus();
@@ -1593,6 +1607,7 @@ function setLoginLoading(isLoading, label) {
   ui.btnLogin.disabled = false;
   ui.btnLogin.removeAttribute("aria-busy");
 }
+
 
 
 
