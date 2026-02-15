@@ -200,6 +200,7 @@ export function dayKey(ts) {
 
 export function computeStreak(history) {
   const map = daysMapFromHistory(history);
+  const countedDays = map.size;
 
   const todayKey = dayKey(Date.now());
   const todayCounted = map.has(todayKey);
@@ -215,8 +216,9 @@ export function computeStreak(history) {
     cur.setDate(cur.getDate() - 1);
   }
 
-  return { streak, todayCounted };
+  return { streak, todayCounted, countedDays };
 }
+
 
 
 
