@@ -612,7 +612,7 @@ function dayStatsFromHistory(history = []) {
 
 export function renderStreak(ui, state, { activeDayIndex = null } = {}) {
   const s = computeStreak(state.history);
-  ui.streakCount.textContent = String(s.streak);
+  ui.streakCount.textContent = String(s.countedDays);
   ui.todayBadge.textContent = s.todayCounted ? "Сегодня засчитан ✅" : "Сегодня ещё не засчитан";
 
   if (!ui.dayChips) return;
@@ -846,6 +846,7 @@ export function scrollHistoryToDay(ui, key) {
     behavior: "smooth",
   });
 }
+
 
 
 
